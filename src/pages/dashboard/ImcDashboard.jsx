@@ -9,7 +9,7 @@ import { StatCard, Spinner, Tabs, EmptyState } from '../../components/ui';
 import {
   ClipboardList, AlertTriangle, CheckCircle, Clock, TrendingUp,
   BarChart3, Inbox, AlertOctagon, Timer, ChevronRight, Eye,
-  Paperclip, Search, ArrowUpDown, LayoutDashboard
+  Paperclip, Search, ArrowUpDown, LayoutDashboard, XCircle
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -100,8 +100,7 @@ export default function ImcDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [queueFilter, setQueueFilter] = useState('all');
   
-  // Analytics sub-view config
-  const [analyticsSubView, setAnalyticsSubView] = useState('departments');
+  // Analytics config
   const [searchQuery, setSearchQuery] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'total', direction: 'desc' });
 
@@ -172,31 +171,6 @@ export default function ImcDashboard() {
   }, [allIncidents]);
 
   // 3. Analytics Calculations
-  const departmentAnalytics = useMemo(() => {
-    return mockDepartments.map(dept => {
-      const deptIncidents = allIncidents.filter(inc => (inc.departments || []).includes(dept.name));
-      const solved = deptIncidents.filter(inc => inc.status === 'resolved');
-      
-      // Feedback Given: incident is past the submitted/with_hod stage (or has explicit hod feedback)
-      const feedbackGiven = deptIncidents.filter(inc => 
-        inc.hod_feedback || 
-        ['with_imc', 'with_head_management', 'resolved', 'dispute'].includes(inc.status)
-      ).length;
-
-      const { avgHod, avgImc, avgRes } = computeStats(deptIncidents);
-
-      return {
-        name: dept.name,
-        total: deptIncidents.length,
-        solved: solved.length,
-        feedbackGiven,
-        avgHod,
-        avgImc,
-        avgRes,
-      };
-    });
-  }, [allIncidents]);
-
   const categoryAnalytics = useMemo(() => {
     return INCIDENT_CATEGORIES.map(cat => {
       const catIncidents = allIncidents.filter(inc => inc.incident_category === cat);
@@ -207,6 +181,8 @@ export default function ImcDashboard() {
         ['with_imc', 'with_head_management', 'resolved', 'dispute'].includes(inc.status)
       ).length;
 
+      const missing = catIncidents.filter(inc => !inc.hod_feedback);
+
       const { avgHod, avgImc, avgRes } = computeStats(catIncidents);
 
       return {
@@ -214,6 +190,8 @@ export default function ImcDashboard() {
         total: catIncidents.length,
         solved: solved.length,
         feedbackGiven,
+        missing,
+        incidents: catIncidents,
         avgHod,
         avgImc,
         avgRes,
@@ -228,7 +206,7 @@ export default function ImcDashboard() {
 
   // Filter and Sort Analytics
   const processedAnalytics = useMemo(() => {
-    const rawData = analyticsSubView === 'departments' ? departmentAnalytics : categoryAnalytics;
+    const rawData = categoryAnalytics;
     
     // Filter
     let filtered = rawData.filter(item => 
@@ -310,7 +288,7 @@ export default function ImcDashboard() {
       <Tabs
         tabs={[
           { id: 'overview', label: 'Overview & Queue', icon: LayoutDashboard },
-          { id: 'analytics', label: 'Department & Category Analytics', icon: BarChart3 }
+          { id: 'analytics', label: 'Dept. Analytics & Feedback Tracker', icon: BarChart3 }
         ]}
         active={activeTab}
         onChange={setActiveTab}
@@ -547,46 +525,19 @@ export default function ImcDashboard() {
 
           {/* Tables and Controls Card */}
           <div className="card p-5 space-y-4">
-            {/* View selectors and search bar */}
             <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
-              {/* Toggle switch between departments and categories */}
-              <div className="flex bg-slate-100 p-1 rounded-xl">
-                <button
-                  onClick={() => {
-                    setAnalyticsSubView('departments');
-                    setSortConfig({ key: 'total', direction: 'desc' });
-                  }}
-                  className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                    analyticsSubView === 'departments'
-                      ? 'bg-white text-slate-800 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  Department-wise
-                </button>
-                <button
-                  onClick={() => {
-                    setAnalyticsSubView('categories');
-                    setSortConfig({ key: 'total', direction: 'desc' });
-                  }}
-                  className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                    analyticsSubView === 'categories'
-                      ? 'bg-white text-slate-800 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  Category-wise
-                </button>
-              </div>
+              <h2 className="text-lg font-bold text-slate-800">
+                Category-wise Incident Feedback Tracking
+              </h2>
 
-              {/* Search bar */}
-              <div className="relative w-full sm:w-64">
+              {/* Search */}
+              <div className="relative w-full sm:w-64 flex-shrink-0">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder={`Search ${analyticsSubView === 'departments' ? 'departments' : 'categories'}…`}
+                  placeholder={`Search categories…`}
                   className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder-slate-400"
                 />
               </div>
@@ -597,66 +548,48 @@ export default function ImcDashboard() {
               <table className="table min-w-full divide-y divide-slate-150">
                 <thead>
                   <tr className="bg-slate-50">
-                    <th 
-                      onClick={() => handleSort('name')} 
-                      className="cursor-pointer select-none hover:bg-slate-100 transition-colors text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3.5 px-4 text-left"
-                    >
+                    <th onClick={() => handleSort('name')} className="cursor-pointer select-none hover:bg-slate-100 transition-colors text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3.5 px-4 text-left">
                       <div className="flex items-center gap-1.5">
-                        <span>{analyticsSubView === 'departments' ? 'Department' : 'Incident Category'}</span>
+                        <span>Incident Category</span>
                         <ArrowUpDown size={11} className="text-slate-400" />
                       </div>
                     </th>
-                    <th 
-                      onClick={() => handleSort('total')} 
-                      className="cursor-pointer select-none hover:bg-slate-100 transition-colors text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3.5 px-4 text-center w-36"
-                    >
+                    <th onClick={() => handleSort('total')} className="cursor-pointer select-none hover:bg-slate-100 transition-colors text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3.5 px-4 text-center w-28">
                       <div className="flex items-center justify-center gap-1.5">
-                        <span>Received Incidents</span>
+                        <span>Received</span>
                         <ArrowUpDown size={11} className="text-slate-400" />
                       </div>
                     </th>
-                    <th 
-                      onClick={() => handleSort('feedbackGiven')} 
-                      className="cursor-pointer select-none hover:bg-slate-100 transition-colors text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3.5 px-4 text-center w-40"
-                    >
+                    <th onClick={() => handleSort('feedbackGiven')} className="cursor-pointer select-none hover:bg-slate-100 transition-colors text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3.5 px-4 text-center w-40">
                       <div className="flex items-center justify-center gap-1.5">
-                        <span>Feedback Given</span>
+                        <span>HOD Feedback Given</span>
                         <ArrowUpDown size={11} className="text-slate-400" />
                       </div>
                     </th>
-                    <th 
-                      onClick={() => handleSort('solved')} 
-                      className="cursor-pointer select-none hover:bg-slate-100 transition-colors text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3.5 px-4 text-center w-32"
-                    >
+                    <th className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3.5 px-4 text-center w-36">
+                      Missing HOD Feedback
+                    </th>
+                    <th onClick={() => handleSort('solved')} className="cursor-pointer select-none hover:bg-slate-100 transition-colors text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3.5 px-4 text-center w-28">
                       <div className="flex items-center justify-center gap-1.5">
                         <span>Solved</span>
                         <ArrowUpDown size={11} className="text-slate-400" />
                       </div>
                     </th>
-                    <th 
-                      onClick={() => handleSort('avgHod')} 
-                      className="cursor-pointer select-none hover:bg-slate-100 transition-colors text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3.5 px-4 text-center w-48"
-                    >
+                    <th onClick={() => handleSort('avgHod')} className="cursor-pointer select-none hover:bg-slate-100 transition-colors text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3.5 px-4 text-center w-36">
                       <div className="flex items-center justify-center gap-1.5">
-                        <span>Avg HOD Response</span>
+                        <span>Avg HOD Resp</span>
                         <ArrowUpDown size={11} className="text-slate-400" />
                       </div>
                     </th>
-                    <th 
-                      onClick={() => handleSort('avgImc')} 
-                      className="cursor-pointer select-none hover:bg-slate-100 transition-colors text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3.5 px-4 text-center w-48"
-                    >
+                    <th onClick={() => handleSort('avgImc')} className="cursor-pointer select-none hover:bg-slate-100 transition-colors text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3.5 px-4 text-center w-36">
                       <div className="flex items-center justify-center gap-1.5">
-                        <span>Avg IMC Response</span>
+                        <span>Avg IMC Resp</span>
                         <ArrowUpDown size={11} className="text-slate-400" />
                       </div>
                     </th>
-                    <th 
-                      onClick={() => handleSort('avgRes')} 
-                      className="cursor-pointer select-none hover:bg-slate-100 transition-colors text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3.5 px-4 text-center w-44"
-                    >
+                    <th onClick={() => handleSort('avgRes')} className="cursor-pointer select-none hover:bg-slate-100 transition-colors text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3.5 px-4 text-center w-36">
                       <div className="flex items-center justify-center gap-1.5">
-                        <span>Avg Resolution SLA</span>
+                        <span>Avg Resolution</span>
                         <ArrowUpDown size={11} className="text-slate-400" />
                       </div>
                     </th>
@@ -665,7 +598,7 @@ export default function ImcDashboard() {
                 <tbody className="divide-y divide-slate-150 bg-white">
                   {processedAnalytics.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-8 text-slate-400 text-sm">
+                      <td colSpan={8} className="text-center py-8 text-slate-400 text-sm">
                         No matches found for "{searchQuery}"
                       </td>
                     </tr>
@@ -674,18 +607,24 @@ export default function ImcDashboard() {
                       const pctFeedback = row.total > 0 ? Math.round((row.feedbackGiven / row.total) * 100) : 0;
                       
                       return (
-                        <tr key={row.name} className="hover:bg-slate-50/50 transition-colors">
+                        <tr key={row.name} className="hover:bg-slate-50/50 transition-colors border-b border-slate-150">
                           {/* Name */}
-                          <td className="py-3.5 px-4 text-sm font-semibold text-slate-800">
-                            {row.name}
+                          <td 
+                            onClick={() => navigate(`/management/dashboard/category/${encodeURIComponent(row.name)}`)}
+                            className="py-3.5 px-4 text-sm font-semibold text-indigo-650 hover:text-indigo-850 hover:underline cursor-pointer select-none transition-colors"
+                          >
+                            <div className="flex items-center gap-1">
+                              <span>{row.name}</span>
+                              <ChevronRight size={13} className="text-slate-400 opacity-60" />
+                            </div>
                           </td>
                           
-                          {/* Received Count */}
+                          {/* Received */}
                           <td className="py-3.5 px-4 text-sm font-bold text-slate-700 text-center">
                             {row.total}
                           </td>
                           
-                          {/* Feedback Given Progress & Count */}
+                          {/* HOD Feedback Given progress */}
                           <td className="py-3.5 px-4 text-center">
                             {row.total > 0 ? (
                               <div className="flex flex-col items-center gap-1">
@@ -704,6 +643,25 @@ export default function ImcDashboard() {
                               </div>
                             ) : (
                               <span className="text-slate-400 italic text-xs">—</span>
+                            )}
+                          </td>
+
+                          {/* Missing HOD Feedback */}
+                          <td className="py-3.5 px-4 text-center">
+                            {row.missing?.length > 0 ? (
+                              <div className="flex items-center justify-center gap-2">
+                                <span className="inline-flex items-center gap-1 text-xs font-bold text-red-650">
+                                  <XCircle size={13} /> {row.missing.length}
+                                </span>
+                                <button
+                                  onClick={() => navigate(`/management/dashboard/category/${encodeURIComponent(row.name)}`)}
+                                  className="text-xs font-semibold text-indigo-650 hover:text-indigo-850 hover:underline transition-colors"
+                                >
+                                  View
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-green-600 text-xs font-semibold">All done ✓</span>
                             )}
                           </td>
                           
@@ -729,20 +687,10 @@ export default function ImcDashboard() {
                             )}
                           </td>
                           
-                          {/* Avg HOD Feedback time */}
-                          <td className="py-3.5 px-4 text-sm text-center">
-                            {formatDuration(row.avgHod)}
-                          </td>
-                          
-                          {/* Avg IMC Feedback time */}
-                          <td className="py-3.5 px-4 text-sm text-center">
-                            {formatDuration(row.avgImc)}
-                          </td>
-                          
-                          {/* Avg Resolution time */}
-                          <td className="py-3.5 px-4 text-sm text-center">
-                            {formatDuration(row.avgRes)}
-                          </td>
+                          {/* Response times */}
+                          <td className="py-3.5 px-4 text-sm text-center">{formatDuration(row.avgHod)}</td>
+                          <td className="py-3.5 px-4 text-sm text-center">{formatDuration(row.avgImc)}</td>
+                          <td className="py-3.5 px-4 text-sm text-center">{formatDuration(row.avgRes)}</td>
                         </tr>
                       );
                     })
