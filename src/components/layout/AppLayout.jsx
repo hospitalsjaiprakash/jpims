@@ -208,7 +208,7 @@ export default function AppLayout() {
           <Settings size={17} />
           <span>Settings</span>
         </NavLink>
-        <button onClick={handleLogout} className="nav-item-inactive w-full text-red-600 hover:bg-red-50 hover:text-red-700">
+        <button onClick={handleLogout} className="nav-item-inactive w-full text-left text-red-600 hover:bg-red-50 hover:text-red-700">
           <LogOut size={17} />
           <span>Sign Out</span>
         </button>

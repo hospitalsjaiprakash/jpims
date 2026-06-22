@@ -28,9 +28,9 @@ const getIncidentMetrics = (inc) => {
 
   let hodTime = null;
   // Look for HOD actions: HOD Reviewed or Redirect Requested
-  const hodEntry = history.find(h => 
-    h.action === 'HOD Reviewed' || 
-    h.action === 'Redirect Requested' || 
+  const hodEntry = history.find(h =>
+    h.action === 'HOD Reviewed' ||
+    h.action === 'Redirect Requested' ||
     h.action.startsWith('Redirected')
   );
   if (hodEntry) {
@@ -40,8 +40,8 @@ const getIncidentMetrics = (inc) => {
   }
 
   let imcTime = null;
-  const imcEntry = history.find(h => 
-    h.action === 'IMC Processed' || 
+  const imcEntry = history.find(h =>
+    h.action === 'IMC Processed' ||
     h.action === 'Under Investigation'
   );
   if (imcEntry) {
@@ -52,8 +52,8 @@ const getIncidentMetrics = (inc) => {
   }
 
   let resolutionTime = null;
-  const resolvedEntry = history.find(h => 
-    h.action === 'Resolved' || 
+  const resolvedEntry = history.find(h =>
+    h.action === 'Resolved' ||
     h.action.startsWith('Resolved')
   );
   if (resolvedEntry) {
@@ -117,7 +117,7 @@ export default function ImcDashboard() {
     setSearchParams(tab !== 'overview' ? { tab } : {}, { replace: true });
   };
   const [queueFilter, setQueueFilter] = useState('all');
-  
+
   // Analytics config
   const [searchQuery, setSearchQuery] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'total', direction: 'desc' });
@@ -159,7 +159,7 @@ export default function ImcDashboard() {
     const resolved = allIncidents.filter(i => i.status === 'resolved').length;
     const now = new Date();
     const thisMonth = allIncidents.filter(i => new Date(i.created_at).getMonth() === now.getMonth()).length;
-    
+
     return {
       total: allIncidents.length,
       active,
@@ -193,9 +193,9 @@ export default function ImcDashboard() {
     return INCIDENT_CATEGORIES.map(cat => {
       const catIncidents = allIncidents.filter(inc => inc.incident_category === cat);
       const solved = catIncidents.filter(inc => inc.status === 'resolved');
-      
-      const feedbackGiven = catIncidents.filter(inc => 
-        inc.hod_feedback || 
+
+      const feedbackGiven = catIncidents.filter(inc =>
+        inc.hod_feedback ||
         ['with_imc', 'with_head_management', 'resolved', 'dispute'].includes(inc.status)
       ).length;
 
@@ -225,9 +225,9 @@ export default function ImcDashboard() {
   // Filter and Sort Analytics
   const processedAnalytics = useMemo(() => {
     const rawData = categoryAnalytics;
-    
+
     // Filter
-    let filtered = rawData.filter(item => 
+    let filtered = rawData.filter(item =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -242,12 +242,12 @@ export default function ImcDashboard() {
         if (valB === null || valB === undefined) return -1;
 
         if (typeof valA === 'string') {
-          return sortConfig.direction === 'asc' 
-            ? valA.localeCompare(valB) 
+          return sortConfig.direction === 'asc'
+            ? valA.localeCompare(valB)
             : valB.localeCompare(valA);
         } else {
-          return sortConfig.direction === 'asc' 
-            ? valA - valB 
+          return sortConfig.direction === 'asc'
+            ? valA - valB
             : valB - valA;
         }
       });
@@ -295,7 +295,7 @@ export default function ImcDashboard() {
       {/* Page header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">IMC Dashboard & Queue</h1>
+          <h1 className="page-title">IMC Dashboard</h1>
           <p className="page-subtitle">
             Welcome back, Incident Management Committee (Quality Department)
           </p>
@@ -305,7 +305,7 @@ export default function ImcDashboard() {
       {/* Tabs */}
       <Tabs
         tabs={[
-          { id: 'overview', label: 'Overview & Queue', icon: LayoutDashboard },
+          { id: 'overview', label: 'Overview', icon: LayoutDashboard },
           { id: 'analytics', label: 'Dept. Analytics & Feedback Tracker', icon: BarChart3 }
         ]}
         active={activeTab}
@@ -361,7 +361,7 @@ export default function ImcDashboard() {
                 <ClipboardList size={16} className="text-indigo-500" />
                 <span>Pending Queue Action Items</span>
               </h2>
-              
+
               {/* Queue Filter buttons */}
               <div className="flex gap-1.5 flex-wrap">
                 {[
@@ -373,16 +373,14 @@ export default function ImcDashboard() {
                   <button
                     key={tab.key}
                     onClick={() => setQueueFilter(tab.key)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                      queueFilter === tab.key
-                        ? 'bg-indigo-600 text-white border-indigo-600'
-                        : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
-                    }`}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${queueFilter === tab.key
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
+                      }`}
                   >
                     <span>{tab.label}</span>
-                    <span className={`text-[10px] rounded-full px-1.5 py-0.5 font-bold ${
-                      queueFilter === tab.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
-                    }`}>{counts[tab.key]}</span>
+                    <span className={`text-[10px] rounded-full px-1.5 py-0.5 font-bold ${queueFilter === tab.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                      }`}>{counts[tab.key]}</span>
                   </button>
                 ))}
               </div>
@@ -402,19 +400,17 @@ export default function ImcDashboard() {
                     <div
                       key={inc.id}
                       onClick={() => navigate(`/incidents/${encodeURIComponent(inc.id)}`)}
-                      className={`card p-4 cursor-pointer hover:shadow-card-hover border transition-all group relative overflow-hidden ${
-                        isRedirect 
-                          ? 'border-orange-100 bg-gradient-to-r from-orange-50/10 to-transparent' 
-                          : inc.status === 'dispute'
+                      className={`card p-4 cursor-pointer hover:shadow-card-hover border transition-all group relative overflow-hidden ${isRedirect
+                        ? 'border-orange-100 bg-gradient-to-r from-orange-50/10 to-transparent'
+                        : inc.status === 'dispute'
                           ? 'border-red-100 bg-gradient-to-r from-red-50/10 to-transparent'
                           : 'border-slate-150 hover:border-indigo-100'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-start gap-4">
-                        <div className={`w-1.5 self-stretch rounded-full flex-shrink-0 ${
-                          inc.severity === 'Grave' ? 'bg-purple-400' :
+                        <div className={`w-1.5 self-stretch rounded-full flex-shrink-0 ${inc.severity === 'Grave' ? 'bg-purple-400' :
                           inc.severity === 'Major' ? 'bg-amber-400' : 'bg-green-400'
-                        }`} />
+                          }`} />
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -459,10 +455,9 @@ export default function ImcDashboard() {
                             <Clock size={11} />
                             <span>{timeAgo(inc.created_at)}</span>
                           </div>
-                          
-                          <div className={`flex items-center gap-1 text-xs font-semibold transition-colors mt-4 group-hover:underline ${
-                            isRedirect ? 'text-orange-700' : 'text-indigo-600'
-                          }`}>
+
+                          <div className={`flex items-center gap-1 text-xs font-semibold transition-colors mt-4 group-hover:underline ${isRedirect ? 'text-orange-700' : 'text-indigo-600'
+                            }`}>
                             <span>{isRedirect ? 'Resolve Redirect' : 'Process Review'}</span>
                             <ChevronRight size={14} />
                           </div>
@@ -623,11 +618,11 @@ export default function ImcDashboard() {
                   ) : (
                     processedAnalytics.map(row => {
                       const pctFeedback = row.total > 0 ? Math.round((row.feedbackGiven / row.total) * 100) : 0;
-                      
+
                       return (
                         <tr key={row.name} className="hover:bg-slate-50/50 transition-colors border-b border-slate-150">
                           {/* Name */}
-                          <td 
+                          <td
                             onClick={() => navigate(`/management/dashboard/category/${encodeURIComponent(row.name)}`)}
                             className="py-3.5 px-4 text-sm font-semibold text-indigo-650 hover:text-indigo-850 hover:underline cursor-pointer select-none transition-colors"
                           >
@@ -636,12 +631,12 @@ export default function ImcDashboard() {
                               <ChevronRight size={13} className="text-slate-400 opacity-60" />
                             </div>
                           </td>
-                          
+
                           {/* Received */}
                           <td className="py-3.5 px-4 text-sm font-bold text-slate-700 text-center">
                             {row.total}
                           </td>
-                          
+
                           {/* HOD Feedback Given progress */}
                           <td className="py-3.5 px-4 text-center">
                             {row.total > 0 ? (
@@ -652,9 +647,8 @@ export default function ImcDashboard() {
                                 </div>
                                 <div className="w-full max-w-[120px] h-1.5 bg-slate-100 border border-slate-200/50 rounded-full overflow-hidden">
                                   <div
-                                    className={`h-full rounded-full transition-all duration-300 ${
-                                      pctFeedback === 100 ? 'bg-green-500' : 'bg-indigo-500'
-                                    }`}
+                                    className={`h-full rounded-full transition-all duration-300 ${pctFeedback === 100 ? 'bg-green-500' : 'bg-indigo-500'
+                                      }`}
                                     style={{ width: `${pctFeedback}%` }}
                                   />
                                 </div>
@@ -682,17 +676,16 @@ export default function ImcDashboard() {
                               <span className="text-green-600 text-xs font-semibold">All done ✓</span>
                             )}
                           </td>
-                          
+
                           {/* Solved Count */}
                           <td className="py-3.5 px-4 text-center">
                             {row.total > 0 ? (
-                              <span className={`inline-flex items-center gap-1 font-bold text-sm ${
-                                row.solved === row.total 
-                                  ? 'text-green-700' 
-                                  : row.solved > 0 
-                                  ? 'text-indigo-600' 
+                              <span className={`inline-flex items-center gap-1 font-bold text-sm ${row.solved === row.total
+                                ? 'text-green-700'
+                                : row.solved > 0
+                                  ? 'text-indigo-600'
                                   : 'text-slate-500'
-                              }`}>
+                                }`}>
                                 {row.solved}
                                 {row.solved === row.total && (
                                   <span className="text-[10px] font-semibold bg-green-50 text-green-700 border border-green-150 rounded px-1 py-0.5">
@@ -704,7 +697,7 @@ export default function ImcDashboard() {
                               <span className="text-slate-400 italic text-xs">—</span>
                             )}
                           </td>
-                          
+
                           {/* Response times */}
                           <td className="py-3.5 px-4 text-sm text-center">{formatDuration(row.avgHod)}</td>
                           <td className="py-3.5 px-4 text-sm text-center">{formatDuration(row.avgImc)}</td>

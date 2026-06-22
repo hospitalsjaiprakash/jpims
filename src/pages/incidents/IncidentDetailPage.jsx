@@ -59,6 +59,8 @@ export default function IncidentDetailPage() {
   const [hodAcknowledged, setHodAcknowledged] = useState(false);
   const [redirectReason, setRedirectReason] = useState('');
   const [redirectTargetDept, setRedirectTargetDept] = useState('');
+  const [showRejectRedirectModal, setShowRejectRedirectModal] = useState(false);
+  const [rejectRedirectReason, setRejectRedirectReason] = useState('');
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['incident', id],
@@ -152,6 +154,15 @@ export default function IncidentDetailPage() {
     onSuccess: () => {
       toast.success('Incident successfully redirected.');
       setRedirectTargetDept('');
+      refetch();
+    }
+  });
+
+  const rejectRedirectMutation = useMutation({
+    mutationFn: () => incidentsApi.rejectRedirect(id, { reason: rejectRedirectReason }),
+    onSuccess: () => {
+      toast.success('Redirection request rejected.');
+      setShowRejectRedirectModal(false);
       refetch();
     }
   });
@@ -334,7 +345,13 @@ export default function IncidentDetailPage() {
                       </select>
                     </div>
 
-                    <div className="flex justify-end pt-2">
+                    <div className="flex justify-end gap-2 pt-2">
+                      <button
+                        onClick={() => setShowRejectRedirectModal(true)}
+                        className="btn-secondary flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300"
+                      >
+                        Reject Request
+                      </button>
                       <button
                         onClick={() => approveRedirectMutation.mutate()}
                         disabled={!redirectTargetDept || approveRedirectMutation.isPending}
@@ -673,6 +690,31 @@ export default function IncidentDetailPage() {
           className="textarea"
           rows={4}
           placeholder="Please explain why this incident is not for your department, and suggest the correct department if possible…"
+        />
+      </Modal>
+
+      {/* Reject Redirection Request Modal */}
+      <Modal open={showRejectRedirectModal} onClose={() => setShowRejectRedirectModal(false)} title="Reject Redirection Request"
+        footer={<>
+          <button onClick={() => setShowRejectRedirectModal(false)} className="btn-secondary">Cancel</button>
+          <button
+            onClick={() => rejectRedirectMutation.mutate()}
+            disabled={!rejectRedirectReason.trim() || rejectRedirectMutation.isPending}
+            className="btn-danger focus:ring-red-500"
+          >
+            {rejectRedirectMutation.isPending ? <Spinner size={15} className="text-white" /> : null}
+            Reject Request
+          </button>
+        </>}
+      >
+        <Alert type="warning" message="This will return the incident to the original department HOD for action." className="mb-4" />
+        <label className="field-label field-required">Reason for Rejection</label>
+        <textarea
+          value={rejectRedirectReason}
+          onChange={e => setRejectRedirectReason(e.target.value)}
+          className="textarea"
+          rows={4}
+          placeholder="Please explain why the redirection request is denied..."
         />
       </Modal>
 

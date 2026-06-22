@@ -20,6 +20,13 @@ const api = {
   }
 };
 
+const saveIncidents = () => {
+  localStorage.setItem('ims_incidents', JSON.stringify(mockIncidents));
+};
+const saveNotifications = () => {
+  localStorage.setItem('ims_notifications', JSON.stringify(mockNotifications));
+};
+
 // ── Auth ──────────────────────────────────────────
 export const authApi = {
   login: async (data) => {
@@ -123,6 +130,20 @@ export const incidentsApi = {
     const incident = mockIncidents.find(i => i.id === id);
     if (!incident) throw new Error('Not found');
 
+    const userString = localStorage.getItem('ims_user');
+    const currentUser = userString ? JSON.parse(userString) : null;
+
+    if (currentUser?.role === 'hod' && incident.status === 'submitted') {
+      incident.status = incident.severity === 'Grave' ? 'with_hod_and_imc' : 'with_hod';
+      incident.hod_first_viewed_at = new Date().toISOString();
+      incident.workflow_history.push({
+        action: 'HOD Viewed',
+        by: currentUser.fullName,
+        timestamp: new Date().toISOString()
+      });
+      saveIncidents();
+    }
+
     const feedbacks = [];
     if (incident.hod_feedback) {
       feedbacks.push({
@@ -207,6 +228,7 @@ export const incidentsApi = {
       workflow_history: [{ action: 'Reported', by: currentUser ? currentUser.fullName : 'Mock User', timestamp: new Date().toISOString() }]
     };
     mockIncidents.unshift(newIncident);
+    saveIncidents();
     return { data: newIncident };
   },
 
@@ -229,6 +251,7 @@ export const incidentsApi = {
         timestamp: new Date().toISOString()
       });
     }
+    saveIncidents();
     return { data: incident };
   },
 
@@ -344,6 +367,7 @@ export const incidentsApi = {
     await delay();
     const incident = mockIncidents.find(i => i.id === id);
     if (incident) incident.status = 'withdrawn';
+    saveIncidents();
     return { data: incident };
   },
   hodFeedback: async (id, data) => {
@@ -362,6 +386,7 @@ export const incidentsApi = {
         timestamp: new Date().toISOString()
       });
     }
+    saveIncidents();
     return { data: incident };
   },
 
@@ -378,6 +403,7 @@ export const incidentsApi = {
         timestamp: new Date().toISOString()
       });
     }
+    saveIncidents();
     return { data: incident };
   },
   mdDecision: async (id, data) => {
@@ -394,18 +420,21 @@ export const incidentsApi = {
         timestamp: new Date().toISOString()
       });
     }
+    saveIncidents();
     return { data: incident };
   },
   raiseDispute: async (id) => {
     await delay();
     const incident = mockIncidents.find(i => i.id === id);
     if (incident) incident.status = 'dispute';
+    saveIncidents();
     return { data: incident };
   },
   reopen: async (id) => {
     await delay();
     const incident = mockIncidents.find(i => i.id === id);
     if (incident) incident.status = 'with_hod';
+    saveIncidents();
     return { data: incident };
   },
   assignInvestigator: async (id, data) => {
@@ -415,6 +444,7 @@ export const incidentsApi = {
       incident.investigator_name = 'Assigned Investigator';
       incident.status = 'with_imc';
     }
+    saveIncidents();
     return { data: incident };
   },
   requestRedirect: async (id, data) => {
@@ -432,6 +462,7 @@ export const incidentsApi = {
         timestamp: new Date().toISOString()
       });
     }
+    saveIncidents();
     return { data: incident };
   },
   approveRedirect: async (id, data) => {
@@ -449,6 +480,23 @@ export const incidentsApi = {
         timestamp: new Date().toISOString()
       });
     }
+    saveIncidents();
+    return { data: incident };
+  },
+  rejectRedirect: async (id, data) => {
+    await delay();
+    const incident = mockIncidents.find(i => i.id === id);
+    const userString = localStorage.getItem('ims_user');
+    const currentUser = userString ? JSON.parse(userString) : null;
+    if (incident) {
+      incident.status = incident.severity === 'Grave' ? 'with_hod_and_imc' : 'with_hod';
+      incident.workflow_history.push({
+        action: `Redirect Rejected: ${data.reason}`,
+        by: currentUser ? currentUser.fullName : 'IMC',
+        timestamp: new Date().toISOString()
+      });
+    }
+    saveIncidents();
     return { data: incident };
   },
 
@@ -469,6 +517,7 @@ export const incidentsApi = {
         timestamp: new Date().toISOString()
       });
     }
+    saveIncidents();
     return { data: incident };
   },
 };
@@ -483,6 +532,7 @@ export const notificationsApi = {
     await delay();
     const notif = mockNotifications.find(n => n.id === id);
     if (notif) notif.read = true;
+    saveNotifications();
     return { data: { success: true } };
   },
 };

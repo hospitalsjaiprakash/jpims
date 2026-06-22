@@ -154,7 +154,7 @@ export default function IncidentsListPage() {
                 <thead>
                   <tr>
                     <th>Reference ID</th>
-                    {['imc', 'head_management', 'system_admin'].includes(user?.role) && <th>Reporter (Employee ID)</th>}
+                    {['imc', 'head_management', 'system_admin'].includes(user?.role) && <th>Reporter(ID)</th>}
                     <th>Type</th>
                     <th>Department(s)</th>
                     <th>Severity</th>

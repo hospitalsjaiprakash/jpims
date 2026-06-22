@@ -29,6 +29,7 @@ export default function NewIncidentPage() {
   // selectedCategories: string[]  (category names)
   // selectedTypes: { [category]: string }  (one type per category)
   const [form, setForm] = useState({
+    selectedDepartments: [],
     selectedCategories: [],
     selectedTypes: {},       // { "Nursing Care Related": "Injury or fall of patient", ... }
     incidentDate: '',
@@ -47,6 +48,12 @@ export default function NewIncidentPage() {
     queryKey: ['meta'],
     queryFn: () => metaApi.locations().then(r => r.data),
   });
+
+  const { data: departmentsData } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => metaApi.departments().then(r => r.data),
+  });
+  const departmentOptions = (departmentsData || []).map(d => d.name);
 
   const submitMutation = useMutation({
     mutationFn: (data) => incidentsApi.create(data),
@@ -101,8 +108,11 @@ export default function NewIncidentPage() {
       if (form.description.length > 2000) e.description = 'Maximum 2000 characters';
     }
 
-    if (step === 6 && form.hasResponsiblePerson && !form.responsiblePersonName.trim())
-      e.responsiblePersonName = 'Name is required';
+    if (step === 6) {
+      if (form.selectedDepartments.length === 0) e.selectedDepartments = 'Select at least one concerned department';
+      if (form.hasResponsiblePerson && !form.responsiblePersonName.trim())
+        e.responsiblePersonName = 'Name is required';
+    }
 
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -132,9 +142,9 @@ export default function NewIncidentPage() {
       description:           form.description,
       hasResponsiblePerson:  form.hasResponsiblePerson,
       responsiblePersonName: form.responsiblePersonName,
-      // derive departments from categories (pass names for display)
+      // pass user-selected departments
       departmentIds:         [],  // no manual selection
-      derivedDepartments:    categories,   // categories act as owning departments
+      derivedDepartments:    form.selectedDepartments,   // categories act as owning departments
       attachments:           form.attachments.map((file, idx) => ({ 
         id: `att-new-${idx}-${Date.now()}`, 
         name: file.name, 
@@ -413,6 +423,26 @@ export default function NewIncidentPage() {
           {step === 6 && (
             <div className="space-y-4">
               <div>
+                <label className="field-label field-required">Concerned Departments</label>
+                <p className="text-xs text-slate-500 mb-2">Select the departments that should review or act on this incident.</p>
+                <SearchableMultiSelect
+                  options={departmentOptions}
+                  value={form.selectedDepartments}
+                  onChange={(depts) => set('selectedDepartments', depts)}
+                  placeholder="Search & select departments…"
+                  error={!!errors.selectedDepartments}
+                />
+                {errors.selectedDepartments && <p className="field-error">{errors.selectedDepartments}</p>}
+                
+                {form.selectedDepartments.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {form.selectedDepartments.map(dept => (
+                      <span key={dept} className="badge badge-blue">{dept}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="pt-2 border-t border-slate-100">
                 <label className="field-label">Is anyone responsible for this incident?</label>
                 <div className="flex gap-3 mt-2">
                   {[true, false].map(val => (
@@ -473,6 +503,7 @@ export default function NewIncidentPage() {
                 <ReviewRow label="Occurred To" value={form.occurredTo} />
                 <ReviewRow label="Severity" value={form.severity} highlight={form.severity === 'Grave'} />
                 <ReviewRow label="Description" value={form.description} multiline />
+                <ReviewRow label="Concerned Depts" value={form.selectedDepartments.join(', ')} />
                 <ReviewRow
                   label="Responsible Person"
                   value={form.hasResponsiblePerson ? form.responsiblePersonName || '—' : 'None identified'}
