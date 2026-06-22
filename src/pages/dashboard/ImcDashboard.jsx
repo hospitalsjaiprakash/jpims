@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { incidentsApi, imcApi } from '../../api';
 import { mockDepartments } from '../../api/mockData';
@@ -97,7 +97,25 @@ const computeStats = (groupIncidents) => {
 export default function ImcDashboard() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [searchParams] = useSearchParams();
+
+  // Read initial tab from URL (?tab=analytics), default to 'overview'
+  const [activeTab, setActiveTab] = useState(() => {
+    const t = searchParams.get('tab');
+    if (t === 'analytics') return 'analytics';
+    return 'overview';
+  });
+
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t === 'analytics') setActiveTab('analytics');
+    else setActiveTab('overview');
+  }, [searchParams]);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setSearchParams(tab !== 'overview' ? { tab } : {}, { replace: true });
+  };
   const [queueFilter, setQueueFilter] = useState('all');
   
   // Analytics config
@@ -235,7 +253,7 @@ export default function ImcDashboard() {
       });
     }
     return filtered;
-  }, [analyticsSubView, departmentAnalytics, categoryAnalytics, searchQuery, sortConfig]);
+  }, [categoryAnalytics, searchQuery, sortConfig]);
 
   const handleSort = (key) => {
     setSortConfig(prev => ({
@@ -291,7 +309,7 @@ export default function ImcDashboard() {
           { id: 'analytics', label: 'Dept. Analytics & Feedback Tracker', icon: BarChart3 }
         ]}
         active={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
       />
 
       {/* OVERVIEW TAB */}

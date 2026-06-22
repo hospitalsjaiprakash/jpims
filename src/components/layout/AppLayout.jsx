@@ -28,9 +28,7 @@ const getNavItems = (role) => {
     // base.push({ to: '/hod/training', icon: GraduationCap, label: 'Training' });
   }
   if (role === 'imc') {
-    // base.splice(2, 0, { to: '/imc/queue', icon: ClipboardList, label: 'IMC Queue' });
-    // base.push({ to: '/knowledge-base', icon: BookOpen, label: 'Knowledge Base' });
-    // base.push({ to: '/imc/training', icon: GraduationCap, label: 'Training' });
+    base.push({ to: '/imc/dashboard?tab=analytics', icon: BarChart3, label: 'Dept. Analytics', matchSearch: '?tab=analytics' });
   }
   if (role === 'head_management') {
     base.push({ to: '/management/dashboard?tab=analytics', icon: BarChart3, label: 'Dept. Analytics', matchSearch: '?tab=analytics' });
