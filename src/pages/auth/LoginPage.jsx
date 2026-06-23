@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({ fullName: '', employeeId: '', dob: '' });
   const [showDob, setShowDob] = useState(false);
   const [error, setError] = useState('');
-  
+
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [adminTargetRole, setAdminTargetRole] = useState('imc');
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
@@ -59,9 +59,9 @@ export default function LoginPage() {
     <div className="min-h-screen bg-white flex">
       {/* Left Split: Hero Image */}
       <div className="hidden lg:flex w-1/2 relative bg-green-900 overflow-hidden">
-        <img 
-          src={jphBuildImg} 
-          alt="Jaiprakash Hospital Building" 
+        <img
+          src={jphBuildImg}
+          alt="Jaiprakash Hospital Building"
           className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-green-900/80 to-transparent" />
@@ -77,11 +77,11 @@ export default function LoginPage() {
 
       {/* Right Split: Login Form */}
       <div className="w-full lg:w-1/2 flex flex-col relative bg-white">
-        
+
         {/* Admin Login Dropdown */}
         <div className="absolute top-6 right-6 z-50">
           <div className="relative" ref={menuRef}>
-            <button 
+            <button
               onClick={() => setAdminMenuOpen(!adminMenuOpen)}
               className="text-sm font-semibold text-slate-700 hover:text-green-700 bg-white border border-slate-200 shadow-sm hover:border-green-300 px-4 py-2 rounded-xl transition-all flex items-center gap-2"
             >
@@ -183,20 +183,14 @@ export default function LoginPage() {
                 {loading ? 'Verifying…' : 'Sign In as Employee'}
               </button>
             </form>
-
-            <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-              <p className="text-xs text-slate-400">
-                Credentials are validated against the Office Portal.<br />Contact HR if you have trouble signing in.
-              </p>
-            </div>
           </div>
         </div>
       </div>
 
-      <CommitteeLoginModal 
-        open={adminModalOpen} 
-        onClose={() => setAdminModalOpen(false)} 
-        targetRole={adminTargetRole} 
+      <CommitteeLoginModal
+        open={adminModalOpen}
+        onClose={() => setAdminModalOpen(false)}
+        targetRole={adminTargetRole}
       />
     </div>
   );
