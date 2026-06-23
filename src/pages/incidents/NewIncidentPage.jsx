@@ -109,7 +109,6 @@ export default function NewIncidentPage() {
     }
 
     if (step === 6) {
-      if (form.selectedDepartments.length === 0) e.selectedDepartments = 'Select at least one concerned department';
       if (form.hasResponsiblePerson && !form.responsiblePersonName.trim())
         e.responsiblePersonName = 'Name is required';
     }
@@ -423,26 +422,6 @@ export default function NewIncidentPage() {
           {step === 6 && (
             <div className="space-y-4">
               <div>
-                <label className="field-label field-required">Concerned Departments</label>
-                <p className="text-xs text-slate-500 mb-2">Select the departments that should review or act on this incident.</p>
-                <SearchableMultiSelect
-                  options={departmentOptions}
-                  value={form.selectedDepartments}
-                  onChange={(depts) => set('selectedDepartments', depts)}
-                  placeholder="Search & select departments…"
-                  error={!!errors.selectedDepartments}
-                />
-                {errors.selectedDepartments && <p className="field-error">{errors.selectedDepartments}</p>}
-                
-                {form.selectedDepartments.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {form.selectedDepartments.map(dept => (
-                      <span key={dept} className="badge badge-blue">{dept}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="pt-2 border-t border-slate-100">
                 <label className="field-label">Is anyone responsible for this incident?</label>
                 <div className="flex gap-3 mt-2">
                   {[true, false].map(val => (
@@ -503,7 +482,6 @@ export default function NewIncidentPage() {
                 <ReviewRow label="Occurred To" value={form.occurredTo} />
                 <ReviewRow label="Severity" value={form.severity} highlight={form.severity === 'Grave'} />
                 <ReviewRow label="Description" value={form.description} multiline />
-                <ReviewRow label="Concerned Depts" value={form.selectedDepartments.join(', ')} />
                 <ReviewRow
                   label="Responsible Person"
                   value={form.hasResponsiblePerson ? form.responsiblePersonName || '—' : 'None identified'}

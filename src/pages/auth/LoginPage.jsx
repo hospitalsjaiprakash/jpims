@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { Eye, EyeOff, AlertCircle, ChevronDown, Lock } from 'lucide-react';
+import { AlertCircle, ChevronDown, Lock } from 'lucide-react';
 import { Spinner } from '../../components/ui';
 import CommitteeLoginModal from '../../components/auth/CommitteeLoginModal';
 
@@ -12,7 +12,6 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login, loading } = useAuthStore();
   const [form, setForm] = useState({ fullName: '', employeeId: '', dob: '' });
-  const [showDob, setShowDob] = useState(false);
   const [error, setError] = useState('');
 
   const [adminModalOpen, setAdminModalOpen] = useState(false);
@@ -58,15 +57,18 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-white flex">
       {/* Left Split: Hero Image */}
-      <div className="hidden lg:flex w-1/2 relative bg-green-900 overflow-hidden">
+      <div className="hidden lg:flex lg:w-[70%] relative bg-green-900 overflow-hidden">
         <img
           src={jphBuildImg}
           alt="Jaiprakash Hospital Building"
           className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-green-900/80 to-transparent" />
-        <div className="relative z-10 flex flex-col justify-end p-12 w-full text-white">
-          <h2 className="text-4xl font-bold font-display mb-2">
+        <div className="relative z-10 flex flex-col justify-end p-16 w-full text-white">
+          <h1 className="text-5xl lg:text-7xl font-bold font-display mb-6 tracking-tight text-white drop-shadow-lg">
+            WELCOME TO THE IMS
+          </h1>
+          <h2 className="text-3xl font-bold font-display mb-2 text-white/90">
             Jaiprakash Hospital & Research Centre
           </h2>
           <p className="text-green-50 text-lg italic">
@@ -76,7 +78,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right Split: Login Form */}
-      <div className="w-full lg:w-1/2 flex flex-col relative bg-white">
+      <div className="w-full lg:w-[30%] flex flex-col relative bg-white">
 
         {/* Admin Login Dropdown */}
         <div className="absolute top-6 right-6 z-50">
@@ -157,20 +159,13 @@ export default function LoginPage() {
                 <div className="relative">
                   <input
                     name="dob"
-                    type={showDob ? 'text' : 'date'}
+                    type="date"
                     value={form.dob}
                     onChange={handleChange}
                     placeholder="dd-mm-yyyy"
-                    className={`w-full pl-4 pr-11 py-3 bg-slate-50 border ${error ? 'border-red-300 focus:ring-red-500' : 'border-slate-200 focus:border-green-500 focus:ring-green-500'} rounded-xl text-slate-900 outline-none transition-all focus:ring-2 focus:ring-opacity-20`}
+                    className={`w-full px-4 py-3 bg-slate-50 border ${error ? 'border-red-300 focus:ring-red-500' : 'border-slate-200 focus:border-green-500 focus:ring-green-500'} rounded-xl text-slate-900 outline-none transition-all focus:ring-2 focus:ring-opacity-20`}
                     autoComplete="bday"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowDob(!showDob)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-green-600 transition-colors"
-                  >
-                    {showDob ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
                 </div>
               </div>
 
