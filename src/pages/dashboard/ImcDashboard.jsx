@@ -9,7 +9,7 @@ import { StatCard, Spinner, Tabs, EmptyState } from '../../components/ui';
 import {
   ClipboardList, AlertTriangle, CheckCircle, Clock, TrendingUp,
   BarChart3, Inbox, AlertOctagon, Timer, ChevronRight, Eye,
-  Paperclip, Search, ArrowUpDown, LayoutDashboard, XCircle
+  Paperclip, Search, ArrowUpDown, LayoutDashboard, XCircle, Download, FileDown, ShieldAlert, Flame
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -142,6 +142,7 @@ export default function ImcDashboard() {
       grave: queue.filter(i => i.severity === 'Grave' && i.status !== 'redirect_requested').length,
       redirects: queue.filter(i => i.status === 'redirect_requested').length,
       disputes: queue.filter(i => i.status === 'dispute').length,
+      overdue: queue.filter(i => ((new Date() - new Date(i.created_at)) / 3600000 > 48) && i.status !== 'resolved').length,
     };
   }, [queue]);
 
@@ -150,6 +151,7 @@ export default function ImcDashboard() {
     if (queueFilter === 'redirects') return queue.filter(i => i.status === 'redirect_requested');
     if (queueFilter === 'grave') return queue.filter(i => i.severity === 'Grave' && i.status !== 'redirect_requested');
     if (queueFilter === 'disputes') return queue.filter(i => i.status === 'dispute');
+    if (queueFilter === 'overdue') return queue.filter(i => ((new Date() - new Date(i.created_at)) / 3600000 > 48) && i.status !== 'resolved');
     return queue;
   }, [queue, queueFilter]);
 
@@ -160,11 +162,16 @@ export default function ImcDashboard() {
     const now = new Date();
     const thisMonth = allIncidents.filter(i => new Date(i.created_at).getMonth() === now.getMonth()).length;
 
+    const overdueCount = allIncidents.filter(i => i.status !== 'resolved' && i.status !== 'withdrawn' && ((new Date() - new Date(i.created_at)) / 3600000 > 48)).length;
+    const activeGraveCount = allIncidents.filter(i => i.severity === 'Grave' && i.status !== 'resolved' && i.status !== 'withdrawn').length;
+
     return {
       total: allIncidents.length,
       active,
       resolved,
-      thisMonth
+      thisMonth,
+      overdueCount,
+      activeGraveCount
     };
   }, [allIncidents]);
 
@@ -220,6 +227,27 @@ export default function ImcDashboard() {
   // Global Averages
   const globalAverages = useMemo(() => {
     return computeStats(allIncidents);
+  }, [allIncidents]);
+
+  const rcaStats = useMemo(() => {
+    const majorGrave = allIncidents.filter(i => i.severity === 'Major' || i.severity === 'Grave');
+    const withRca = majorGrave.filter(i => i.status === 'resolved' || i.management_feedback);
+    return {
+      total: majorGrave.length,
+      completed: withRca.length,
+      pct: majorGrave.length > 0 ? Math.round((withRca.length / majorGrave.length) * 100) : 0
+    };
+  }, [allIncidents]);
+
+  const departmentLeaderboard = useMemo(() => {
+    return mockDepartments.map(d => {
+      const deptName = d.name;
+      const dInc = allIncidents.filter(i => (i.departments || []).includes(deptName));
+      const { avgHod } = computeStats(dInc);
+      const activeCount = dInc.filter(i => i.status !== 'resolved' && i.status !== 'withdrawn').length;
+      return { dept: deptName, activeCount, avgHod: avgHod || 0, score: avgHod ? avgHod + activeCount : 999 };
+    }).filter(d => d.activeCount > 0 || d.avgHod > 0)
+      .sort((a, b) => a.score - b.score);
   }, [allIncidents]);
 
   // Filter and Sort Analytics
@@ -300,6 +328,10 @@ export default function ImcDashboard() {
             Welcome back, Incident Management Committee (Quality Department)
           </p>
         </div>
+        <button className="btn-secondary" onClick={() => alert('Exporting Executive Summary...')}>
+          <FileDown size={16} />
+          Export Executive Report
+        </button>
       </div>
 
       {/* Tabs */}
@@ -315,6 +347,33 @@ export default function ImcDashboard() {
       {/* OVERVIEW TAB */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          
+          {/* SLA Breach Alerts Panel */}
+          {(totals.overdueCount > 0 || totals.activeGraveCount > 0) && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <ShieldAlert size={20} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-red-800">SLA Breach & Escalation Alerts</h3>
+                <ul className="mt-1 space-y-1 text-sm text-red-700">
+                  {totals.overdueCount > 0 && (
+                    <li className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      <strong>{totals.overdueCount}</strong> incidents have been pending action for more than 48 hours.
+                    </li>
+                  )}
+                  {totals.activeGraveCount > 0 && (
+                    <li className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      <strong>{totals.activeGraveCount}</strong> active Grave incidents require immediate investigation.
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          )}
+
           {/* KPI Stat Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <StatCard
@@ -323,6 +382,7 @@ export default function ImcDashboard() {
               value={counts.all}
               color="bg-indigo-50"
               iconColor="text-indigo-600"
+              onClick={() => setQueueFilter('all')}
             />
             <StatCard
               icon={AlertTriangle}
@@ -330,6 +390,7 @@ export default function ImcDashboard() {
               value={counts.grave}
               color="bg-purple-50"
               iconColor="text-purple-600"
+              onClick={() => setQueueFilter('grave')}
             />
             <StatCard
               icon={Clock}
@@ -337,6 +398,7 @@ export default function ImcDashboard() {
               value={counts.redirects}
               color="bg-orange-50"
               iconColor="text-orange-600"
+              onClick={() => setQueueFilter('redirects')}
             />
             <StatCard
               icon={AlertOctagon}
@@ -344,6 +406,7 @@ export default function ImcDashboard() {
               value={counts.disputes}
               color="bg-red-50"
               iconColor="text-red-600"
+              onClick={() => setQueueFilter('disputes')}
             />
             <StatCard
               icon={CheckCircle}
@@ -351,6 +414,7 @@ export default function ImcDashboard() {
               value={totals.resolved}
               color="bg-green-50"
               iconColor="text-green-700"
+              onClick={() => navigate('/incidents', { state: { status: 'resolved' } })}
             />
           </div>
 
@@ -367,6 +431,7 @@ export default function ImcDashboard() {
                 {[
                   { key: 'all', label: 'All Review' },
                   { key: 'grave', label: 'Grave Cases' },
+                  { key: 'overdue', label: 'Overdue SLA' },
                   { key: 'redirects', label: 'Redirects' },
                   { key: 'disputes', label: 'Disputes' },
                 ].map(tab => (
@@ -400,13 +465,22 @@ export default function ImcDashboard() {
                     <div
                       key={inc.id}
                       onClick={() => navigate(`/incidents/${encodeURIComponent(inc.id)}`)}
-                      className={`card p-4 cursor-pointer hover:shadow-card-hover border transition-all group relative overflow-hidden ${isRedirect
+                      className={`card p-4 cursor-pointer hover:shadow-card-hover border transition-all group relative overflow-hidden ${
+                        inc.priority_escalated_by
+                        ? 'border-red-300 bg-red-50/20 shadow-sm'
+                        : isRedirect
                         ? 'border-orange-100 bg-gradient-to-r from-orange-50/10 to-transparent'
                         : inc.status === 'dispute'
                           ? 'border-red-100 bg-gradient-to-r from-red-50/10 to-transparent'
                           : 'border-slate-150 hover:border-indigo-100'
                         }`}
                     >
+                      {inc.priority_escalated_by && (
+                        <div className="absolute top-0 right-0 px-2 py-1 bg-red-100 text-red-700 text-[10px] font-bold rounded-bl-lg border-b border-l border-red-200 animate-pulse">
+                          <Flame size={10} className="inline mr-1" />
+                          ESCALATED PRIORITY
+                        </div>
+                      )}
                       <div className="flex items-start gap-4">
                         <div className={`w-1.5 self-stretch rounded-full flex-shrink-0 ${inc.severity === 'Grave' ? 'bg-purple-400' :
                           inc.severity === 'Major' ? 'bg-amber-400' : 'bg-green-400'
@@ -419,6 +493,11 @@ export default function ImcDashboard() {
                             <span className={getStatusClass(inc.status)}>{getStatusLabel(inc.status)}</span>
                             {isRedirect && (
                               <span className="badge bg-orange-100 text-orange-850 font-bold">Redirect Requested</span>
+                            )}
+                            {inc.priority_escalated_by && (
+                              <span className="badge bg-red-100 text-red-700 font-bold border border-red-200">
+                                <Flame size={10} className="inline mr-1" /> ESCALATED BY {inc.priority_escalated_by.toUpperCase()}
+                              </span>
                             )}
                             {inc.attachments && inc.attachments.length > 0 && (
                               <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5" title={`${inc.attachments.length} attachment(s)`}>
@@ -501,6 +580,29 @@ export default function ImcDashboard() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
+
+            {/* RCA CAPA Tracker */}
+            <div className="card p-5">
+              <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <ShieldAlert size={16} className="text-emerald-500" />
+                RCA & CAPA Compliance
+              </h3>
+              <div className="flex flex-col items-center justify-center h-48 space-y-4">
+                 <div className="relative w-32 h-32 flex items-center justify-center">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                      <path className="text-slate-100" strokeWidth="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                      <path className="text-emerald-500" strokeWidth="4" strokeDasharray={`${rcaStats.pct}, 100`} stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    </svg>
+                    <div className="absolute flex flex-col items-center justify-center">
+                      <span className="text-2xl font-bold text-slate-800">{rcaStats.pct}%</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Completed</span>
+                    </div>
+                 </div>
+                 <div className="text-xs text-center text-slate-500 max-w-[200px]">
+                   <span className="font-bold text-slate-700">{rcaStats.completed}</span> out of <span className="font-bold text-slate-700">{rcaStats.total}</span> Major/Grave incidents have documented RCA.
+                 </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -534,6 +636,32 @@ export default function ImcDashboard() {
               iconColor="text-green-700"
               sub="Avg overall resolution SLA"
             />
+          </div>
+
+          {/* Top/Bottom Leaderboard */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="card p-4 border-l-4 border-l-green-500">
+              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2"><TrendingUp size={16} className="text-green-500" /> Top Performing Departments</h3>
+              <div className="space-y-2">
+                {departmentLeaderboard.slice(0, 3).map((d, i) => (
+                  <div key={d.dept} className="flex justify-between items-center text-sm p-2 bg-slate-50 rounded-lg border border-slate-100">
+                     <span className="font-semibold text-slate-700">{i+1}. {d.dept}</span>
+                     <span className="text-xs text-slate-500">{d.avgHod ? d.avgHod.toFixed(1)+'h avg' : 'N/A'} · {d.activeCount} active</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="card p-4 border-l-4 border-l-red-500">
+              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2"><AlertTriangle size={16} className="text-red-500" /> Action Required Departments</h3>
+              <div className="space-y-2">
+                {departmentLeaderboard.slice().reverse().slice(0, 3).map((d, i) => (
+                  <div key={d.dept} className="flex justify-between items-center text-sm p-2 bg-slate-50 rounded-lg border border-slate-100">
+                     <span className="font-semibold text-slate-700">{d.dept}</span>
+                     <span className="text-xs text-slate-500">{d.avgHod ? d.avgHod.toFixed(1)+'h avg' : 'N/A'} · <span className="font-bold text-red-600">{d.activeCount} active</span></span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Tables and Controls Card */}

@@ -65,9 +65,9 @@ export default function LoginPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-green-900/80 to-transparent" />
         <div className="relative z-10 flex flex-col justify-end p-16 w-full text-white">
-          <h1 className="text-5xl lg:text-7xl font-bold font-display mb-6 tracking-tight text-white drop-shadow-lg">
+          <h2 className="text-5xl lg:text-7xl font-bold font-display mb-6 tracking-tight text-white drop-shadow-lg">
             WELCOME TO THE IMS
-          </h1>
+          </h2>
           <h2 className="text-3xl font-bold font-display mb-2 text-white/90">
             Jaiprakash Hospital & Research Centre
           </h2>

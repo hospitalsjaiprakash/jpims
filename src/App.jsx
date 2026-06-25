@@ -22,6 +22,7 @@ import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import AdminAuditPage from './pages/admin/AdminAuditPage';
 import CategoryDetailPage from './pages/dashboard/CategoryDetailPage';
+import PlaceholderPage from './pages/PlaceholderPage';
 
 // Returns the home URL for a given role
 const getRoleDashboard = (role) => {
@@ -99,6 +100,10 @@ export default function App() {
             {/* Management Portal */}
             <Route path="management/dashboard" element={<ProtectedRoute roles={['head_management']}><ManagementDashboard /></ProtectedRoute>} />
             <Route path="management/dashboard/category/:categoryName" element={<ProtectedRoute roles={['head_management', 'system_admin', 'imc']}><CategoryDetailPage /></ProtectedRoute>} />
+            <Route path="management/reports" element={<ProtectedRoute roles={['head_management']}><PlaceholderPage title="Executive Reports" /></ProtectedRoute>} />
+            
+            {/* HOD Specific */}
+            <Route path="hod/action-items" element={<ProtectedRoute roles={['hod']}><PlaceholderPage title="Action Items" /></ProtectedRoute>} />
 
             {/* System Office Portal */}
             <Route path="admin/dashboard" element={<ProtectedRoute roles={['system_admin']}><SystemAdminDashboard /></ProtectedRoute>} />

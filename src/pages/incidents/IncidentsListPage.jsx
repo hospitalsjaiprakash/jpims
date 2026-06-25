@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { incidentsApi } from '../../api';
 import { getSeverityClass, getStatusClass, getStatusLabel, formatDate, INCIDENT_CATEGORIES, SEVERITY_OPTIONS } from '../../utils/helpers';
@@ -11,7 +11,28 @@ export default function IncidentsListPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
 
-  const [filters, setFilters] = useState({ status: '', severity: '', incidentCategory: '', dateFrom: '', dateTo: '', page: 1, viewMode: 'department' });
+  const location = useLocation();
+  const [filters, setFilters] = useState({ 
+    status: location.state?.status || '', 
+    severity: '', 
+    incidentCategory: '', 
+    dateFrom: '', 
+    dateTo: '', 
+    page: 1, 
+    viewMode: location.state?.viewMode || 'department' 
+  });
+
+  // Sync state if it changes during navigation (e.g., clicking dashboard cards again)
+  useEffect(() => {
+    if (location.state) {
+      setFilters(f => ({
+        ...f,
+        status: location.state.status || '',
+        viewMode: location.state.viewMode || f.viewMode,
+        page: 1
+      }));
+    }
+  }, [location.state]);
   const [showFilters, setShowFilters] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -27,6 +48,7 @@ export default function IncidentsListPage() {
   const hasFilters = filters.status || filters.severity || filters.incidentCategory || filters.dateFrom || filters.dateTo;
 
   const STATUS_OPTIONS = [
+    { value: 'active', label: 'Active (Unresolved)' },
     { value: 'submitted', label: 'Submitted' },
     { value: 'with_hod', label: 'HOD Review' },
     { value: 'with_imc', label: 'IMC Review' },

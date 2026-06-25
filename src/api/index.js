@@ -101,7 +101,11 @@ export const incidentsApi = {
     
     if (params) {
       if (params.status) {
-        filtered = filtered.filter(i => i.status === params.status);
+        if (params.status === 'active') {
+          filtered = filtered.filter(i => i.status !== 'resolved' && i.status !== 'withdrawn');
+        } else {
+          filtered = filtered.filter(i => i.status === params.status);
+        }
       }
       if (params.severity) {
         filtered = filtered.filter(i => i.severity === params.severity);
@@ -514,6 +518,24 @@ export const incidentsApi = {
       incident.workflow_history.push({
         action: `${feedbackType.toUpperCase()} Feedback Edited`,
         by: currentUser ? currentUser.fullName : 'Management',
+        timestamp: new Date().toISOString()
+      });
+    }
+    saveIncidents();
+    return { data: incident };
+  },
+
+  escalatePriority: async (id) => {
+    await delay();
+    const incident = mockIncidents.find(i => i.id === id);
+    const userString = localStorage.getItem('ims_user');
+    const currentUser = userString ? JSON.parse(userString) : null;
+    if (incident && currentUser) {
+      incident.priority_escalated_by = currentUser.role === 'head_management' ? 'Management' : 'IMC';
+      if (!incident.workflow_history) incident.workflow_history = [];
+      incident.workflow_history.push({
+        action: 'Priority Escalated',
+        by: currentUser.fullName,
         timestamp: new Date().toISOString()
       });
     }

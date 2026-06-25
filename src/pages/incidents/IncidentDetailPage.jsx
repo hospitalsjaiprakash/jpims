@@ -12,7 +12,7 @@ import { Alert, Modal, Spinner } from '../../components/ui';
 import {
   ArrowLeft, MapPin, Calendar, User, FileText, CheckCircle,
   Clock, XCircle, AlertTriangle, MessageSquare, ChevronRight,
-  Undo2, ThumbsDown, Users, Building, Pencil, AlertCircle
+  Undo2, ThumbsDown, Users, Building, Pencil, AlertCircle, Flame
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -97,6 +97,11 @@ export default function IncidentDetailPage() {
   const reopenMutation = useMutation({
     mutationFn: () => incidentsApi.reopen(id, { reason: reopenReason }),
     onSuccess: () => { toast.success('Incident reopened.'); setShowReopenModal(false); refetch(); }
+  });
+
+  const escalateMutation = useMutation({
+    mutationFn: () => incidentsApi.escalatePriority(id),
+    onSuccess: () => { toast.success('Priority escalated!'); refetch(); }
   });
 
   // Edit own feedback (role-based)
@@ -201,6 +206,9 @@ export default function IncidentDetailPage() {
   const canReopen = (user?.role === 'head_management' || user?.role === 'imc') &&
     incident.status === 'resolved';
 
+  const canEscalate = (user?.role === 'head_management' || user?.role === 'imc') &&
+    incident.status !== 'resolved' && incident.status !== 'withdrawn' && !incident.priority_escalated_by;
+
   return (
     <div className="w-full space-y-5">
       {/* Back */}
@@ -213,9 +221,15 @@ export default function IncidentDetailPage() {
       <div className="card p-5">
         <div className="flex flex-col sm:flex-row sm:items-start gap-4">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="font-mono text-base font-bold text-green-700">{incident.reference_id}</span>
               <span className={getStatusClass(incident.status)}>{getStatusLabel(incident.status)}</span>
+              {incident.priority_escalated_by && (
+                <span className="badge bg-red-100 text-red-700 font-bold border border-red-200 animate-pulse">
+                  <Flame size={12} className="inline mr-1" />
+                  ESCALATED BY {incident.priority_escalated_by.toUpperCase()}
+                </span>
+              )}
             </div>
             <h1 className="text-lg font-bold text-slate-900 font-display">{incident.incident_type}</h1>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
@@ -239,7 +253,7 @@ export default function IncidentDetailPage() {
         </div>
 
         {/* Action buttons */}
-        {(canWithdraw || canHodFeedback || canRequestRedirect || canMdAct || canDispute || canReopen
+        {(canWithdraw || canHodFeedback || canRequestRedirect || canMdAct || canDispute || canReopen || canEscalate
           || (user?.id === incident.reporter_id && incident.status === 'submitted')
         ) && (
           <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-200">
@@ -283,6 +297,12 @@ export default function IncidentDetailPage() {
               <button onClick={() => setShowReopenModal(true)} className="btn-ghost btn-sm text-slate-600">
                 <Undo2 size={14} />
                 Re-open
+              </button>
+            )}
+            {canEscalate && (
+              <button onClick={() => escalateMutation.mutate()} disabled={escalateMutation.isPending} className="btn-secondary btn-sm border-red-200 text-red-600 hover:bg-red-50">
+                {escalateMutation.isPending ? <Spinner size={14} /> : <Flame size={14} />}
+                Escalate Priority
               </button>
             )}
           </div>

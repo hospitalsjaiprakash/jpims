@@ -10,7 +10,7 @@ import {
   FileText, CheckCircle, Clock, TrendingUp, AlertTriangle,
   Eye, ChevronRight, Gavel, BarChart3, AlertOctagon, Paperclip,
   Timer, Search, ArrowUpDown, LayoutDashboard, MessageSquare,
-  CheckSquare, XCircle, ChevronDown, ChevronUp, Pencil, UserCheck, AlertCircle
+  CheckSquare, XCircle, ChevronDown, ChevronUp, Pencil, UserCheck, AlertCircle, FileDown, ShieldAlert, Flame
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -194,6 +194,27 @@ export default function ManagementDashboard() {
     return computeStats(allIncidents);
   }, [allIncidents]);
 
+  const rcaStats = useMemo(() => {
+    const majorGrave = allIncidents.filter(i => i.severity === 'Major' || i.severity === 'Grave');
+    const withRca = majorGrave.filter(i => i.status === 'resolved' || i.management_feedback);
+    return {
+      total: majorGrave.length,
+      completed: withRca.length,
+      pct: majorGrave.length > 0 ? Math.round((withRca.length / majorGrave.length) * 100) : 0
+    };
+  }, [allIncidents]);
+
+  const departmentLeaderboard = useMemo(() => {
+    return mockDepartments.map(d => {
+      const deptName = d.name;
+      const dInc = allIncidents.filter(i => (i.departments || []).includes(deptName));
+      const { avgHod } = computeStats(dInc);
+      const activeCount = dInc.filter(i => i.status !== 'resolved' && i.status !== 'withdrawn').length;
+      return { dept: deptName, activeCount, avgHod: avgHod || 0, score: avgHod ? avgHod + activeCount : 999 };
+    }).filter(d => d.activeCount > 0 || d.avgHod > 0)
+      .sort((a, b) => a.score - b.score);
+  }, [allIncidents]);
+
   // Filter and Sort Analytics
   const processedAnalytics = useMemo(() => {
     const rawData = categoryAnalytics;
@@ -267,6 +288,9 @@ export default function ManagementDashboard() {
   const bySeverity = r.bySeverity || [];
   const monthly = r.monthly || [];
 
+  const overdueCount = allIncidents.filter(i => i.status !== 'resolved' && i.status !== 'withdrawn' && i.status !== 'dispute' && ((new Date() - new Date(i.created_at)) / 3600000 > 48)).length;
+  const activeGraveCount = allIncidents.filter(i => i.severity === 'Grave' && i.status !== 'resolved' && i.status !== 'withdrawn').length;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -277,6 +301,10 @@ export default function ManagementDashboard() {
             Welcome back, {user?.fullName?.split(' ')[0]} · {user?.department || 'MD Office'}
           </p>
         </div>
+        <button className="btn-secondary" onClick={() => alert('Exporting Executive Summary...')}>
+          <FileDown size={16} />
+          Export Executive Report
+        </button>
       </div>
 
       {/* Tabs */}
@@ -292,6 +320,33 @@ export default function ManagementDashboard() {
       {/* OVERVIEW TAB */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          
+          {/* SLA Breach Alerts Panel */}
+          {(overdueCount > 0 || activeGraveCount > 0) && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <ShieldAlert size={20} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-red-800">SLA Breach & Escalation Alerts</h3>
+                <ul className="mt-1 space-y-1 text-sm text-red-700">
+                  {overdueCount > 0 && (
+                    <li className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      <strong>{overdueCount}</strong> incidents have been pending action for more than 48 hours.
+                    </li>
+                  )}
+                  {activeGraveCount > 0 && (
+                    <li className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      <strong>{activeGraveCount}</strong> active Grave incidents require immediate investigation.
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          )}
+
           {/* Alert for pending decisions */}
           {r.awaitingDecision > 0 && (
             <Alert
@@ -303,11 +358,11 @@ export default function ManagementDashboard() {
 
           {/* KPI cards */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <StatCard icon={AlertTriangle} label="Awaiting Decision" value={r.awaitingDecision || 0} color="bg-orange-50" iconColor="text-orange-600" />
-            <StatCard icon={CheckCircle} label="Resolved" value={r.resolved || 0} color="bg-green-50" iconColor="text-green-700" />
-            <StatCard icon={FileText} label="Total Incidents" value={r.totalIncidents || 0} color="bg-blue-50" iconColor="text-blue-600" />
-            <StatCard icon={TrendingUp} label="This Month" value={r.thisMonth || 0} color="bg-indigo-50" iconColor="text-indigo-600" />
-            <StatCard icon={AlertOctagon} label="Disputes" value={r.disputes || 0} color="bg-red-50" iconColor="text-red-600" />
+            <StatCard icon={AlertTriangle} label="Awaiting Decision" value={r.awaitingDecision || 0} color="bg-orange-50" iconColor="text-orange-600" onClick={() => navigate('/incidents', { state: { status: 'with_head_management' } })} />
+            <StatCard icon={CheckCircle} label="Resolved" value={r.resolved || 0} color="bg-green-50" iconColor="text-green-700" onClick={() => navigate('/incidents', { state: { status: 'resolved' } })} />
+            <StatCard icon={FileText} label="Total Incidents" value={r.totalIncidents || 0} color="bg-blue-50" iconColor="text-blue-600" onClick={() => navigate('/incidents')} />
+            <StatCard icon={TrendingUp} label="This Month" value={r.thisMonth || 0} color="bg-indigo-50" iconColor="text-indigo-600" onClick={() => navigate('/incidents')} />
+            <StatCard icon={AlertOctagon} label="Disputes" value={r.disputes || 0} color="bg-red-50" iconColor="text-red-600" onClick={() => navigate('/incidents', { state: { status: 'dispute' } })} />
           </div>
 
           {/* Pending Decision Incidents */}
@@ -330,49 +385,76 @@ export default function ManagementDashboard() {
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
-                {pending.map(inc => (
-                  <div
-                    key={inc.id}
-                    onClick={() => navigate(`/incidents/${encodeURIComponent(inc.id)}`)}
-                    className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors group"
-                  >
-                    <div className={`w-1.5 self-stretch rounded-full flex-shrink-0 ${
-                      inc.severity === 'Grave' ? 'bg-purple-400' :
-                      inc.severity === 'Major' ? 'bg-amber-400' : 'bg-green-400'
-                    }`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="font-mono text-xs font-bold text-green-700">{inc.reference_id}</span>
-                        <span className={`badge ${getSeverityClass(inc.severity)}`}>{inc.severity}</span>
-                        <span className={getStatusClass(inc.status)}>{getStatusLabel(inc.status)}</span>
-                        {inc.attachments && inc.attachments.length > 0 && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5" title={`${inc.attachments.length} attachment(s)`}>
-                            <Paperclip size={10} />
-                            <span>{inc.attachments.length}</span>
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm font-medium text-slate-800 truncate">{inc.incident_type}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {inc.reporter_name} · {inc.main_location_name}{inc.sub_location_name ? ` - ${inc.sub_location_name}` : ''} · {formatDate(inc.incident_date)}
-                      </p>
-                      {inc.imc_feedback && (
-                        <p className="text-xs text-indigo-700 mt-1 italic line-clamp-1">
-                          IMC: "{inc.imc_feedback}"
-                        </p>
+                {pending.map(inc => {
+                  const isOverdue = ((new Date() - new Date(inc.created_at)) / 3600000 > 48);
+                  return (
+                    <div
+                      key={inc.id}
+                      onClick={() => navigate(`/incidents/${encodeURIComponent(inc.id)}`)}
+                      className={`card p-4 cursor-pointer hover:shadow-card-hover border transition-all group relative overflow-hidden ${
+                        inc.priority_escalated_by
+                        ? 'border-red-300 bg-red-50/20 shadow-sm'
+                        : isOverdue
+                        ? 'border-red-100 bg-gradient-to-r from-red-50/10 to-transparent'
+                        : 'border-slate-150 hover:border-blue-100'
+                        }`}
+                    >
+                      {inc.priority_escalated_by && (
+                        <div className="absolute top-0 right-0 px-2 py-1 bg-red-100 text-red-700 text-[10px] font-bold rounded-bl-lg border-b border-l border-red-200 animate-pulse">
+                          <Flame size={10} className="inline mr-1" />
+                          ESCALATED PRIORITY
+                        </div>
                       )}
+                      <div className="flex items-start gap-4">
+                        <div className={`w-1.5 self-stretch rounded-full flex-shrink-0 ${
+                          inc.severity === 'Grave' ? 'bg-purple-400' :
+                          inc.severity === 'Major' ? 'bg-amber-400' : 'bg-green-400'
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="font-mono text-xs font-bold text-green-700">{inc.reference_id}</span>
+                            <span className={`badge ${getSeverityClass(inc.severity)}`}>{inc.severity}</span>
+                            <span className={getStatusClass(inc.status)}>{getStatusLabel(inc.status)}</span>
+                            {isOverdue && (
+                              <span className="badge bg-red-100 text-red-700 font-bold border border-red-200">
+                                <Clock size={10} className="inline mr-1" /> 48h+ SLA BREACH
+                              </span>
+                            )}
+                            {inc.priority_escalated_by && (
+                              <span className="badge bg-red-100 text-red-700 font-bold border border-red-200">
+                                <Flame size={10} className="inline mr-1" /> ESCALATED BY {inc.priority_escalated_by.toUpperCase()}
+                              </span>
+                            )}
+                            {inc.attachments && inc.attachments.length > 0 && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5" title={`${inc.attachments.length} attachment(s)`}>
+                                <Paperclip size={10} />
+                                <span>{inc.attachments.length}</span>
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium text-slate-800 truncate">{inc.incident_type}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {inc.reporter_name} · {inc.main_location_name}{inc.sub_location_name ? ` - ${inc.sub_location_name}` : ''} · {formatDate(inc.incident_date)}
+                          </p>
+                          {inc.imc_feedback && (
+                            <p className="text-xs text-indigo-700 mt-1 italic line-clamp-1">
+                              IMC: "{inc.imc_feedback}"
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={e => { e.stopPropagation(); navigate(`/incidents/${encodeURIComponent(inc.id)}`); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded-lg text-xs font-medium transition-colors border border-orange-200"
+                          >
+                            <Eye size={13} /> Review
+                          </button>
+                          <ChevronRight size={16} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
-                        onClick={e => { e.stopPropagation(); navigate(`/incidents/${encodeURIComponent(inc.id)}`); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded-lg text-xs font-medium transition-colors border border-orange-200"
-                      >
-                        <Eye size={13} /> Review
-                      </button>
-                      <ChevronRight size={16} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -416,6 +498,30 @@ export default function ManagementDashboard() {
                 </ResponsiveContainer>
               )}
             </div>
+
+            {/* RCA CAPA Tracker */}
+            <div className="card p-5">
+              <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <ShieldAlert size={16} className="text-emerald-500" />
+                RCA & CAPA Compliance
+              </h3>
+              <div className="flex flex-col items-center justify-center h-48 space-y-4">
+                 <div className="relative w-32 h-32 flex items-center justify-center">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                      <path className="text-slate-100" strokeWidth="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                      <path className="text-emerald-500" strokeWidth="4" strokeDasharray={`${rcaStats.pct}, 100`} stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    </svg>
+                    <div className="absolute flex flex-col items-center justify-center">
+                      <span className="text-2xl font-bold text-slate-800">{rcaStats.pct}%</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Completed</span>
+                    </div>
+                 </div>
+                 <div className="text-xs text-center text-slate-500 max-w-[200px]">
+                   <span className="font-bold text-slate-700">{rcaStats.completed}</span> out of <span className="font-bold text-slate-700">{rcaStats.total}</span> Major/Grave incidents have documented RCA.
+                 </div>
+              </div>
+            </div>
+
           </div>
 
           {/* Quick actions */}
@@ -469,6 +575,32 @@ export default function ManagementDashboard() {
                 iconColor="text-green-700"
                 sub="Avg overall resolution SLA"
               />
+            </div>
+
+            {/* Top/Bottom Leaderboard */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="card p-4 border-l-4 border-l-green-500">
+                <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2"><TrendingUp size={16} className="text-green-500" /> Top Performing Departments</h3>
+                <div className="space-y-2">
+                  {departmentLeaderboard.slice(0, 3).map((d, i) => (
+                    <div key={d.dept} className="flex justify-between items-center text-sm p-2 bg-slate-50 rounded-lg border border-slate-100">
+                       <span className="font-semibold text-slate-700">{i+1}. {d.dept}</span>
+                       <span className="text-xs text-slate-500">{d.avgHod ? d.avgHod.toFixed(1)+'h avg' : 'N/A'} · {d.activeCount} active</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="card p-4 border-l-4 border-l-red-500">
+                <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2"><AlertTriangle size={16} className="text-red-500" /> Action Required Departments</h3>
+                <div className="space-y-2">
+                  {departmentLeaderboard.slice().reverse().slice(0, 3).map((d, i) => (
+                    <div key={d.dept} className="flex justify-between items-center text-sm p-2 bg-slate-50 rounded-lg border border-slate-100">
+                       <span className="font-semibold text-slate-700">{d.dept}</span>
+                       <span className="text-xs text-slate-500">{d.avgHod ? d.avgHod.toFixed(1)+'h avg' : 'N/A'} · <span className="font-bold text-red-600">{d.activeCount} active</span></span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* IMC Feedback Summary Section */}

@@ -368,9 +368,9 @@ export function Pagination({ page, totalPages, onPageChange }) {
 }
 
 // ── Stat Card ─────────────────────────────────────
-export function StatCard({ icon: Icon, label, value, sub, color = 'bg-blue-50', iconColor = 'text-blue-600', trend }) {
+export function StatCard({ icon: Icon, label, value, sub, color = 'bg-blue-50', iconColor = 'text-blue-600', trend, onClick, className = '' }) {
   return (
-    <div className="stat-card">
+    <div className={`stat-card ${onClick ? 'cursor-pointer hover:shadow-card-hover transition-shadow' : ''} ${className}`} onClick={onClick}>
       <div className={`stat-icon ${color}`}>
         <Icon size={20} className={iconColor} />
       </div>

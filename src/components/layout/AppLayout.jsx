@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, FilePlus, FileText, Bell, Settings, LogOut,
   Users, BarChart3, BookOpen, ClipboardList, GraduationCap,
-  ChevronRight, Menu, X, Shield, AlertTriangle, CheckSquare
+  ChevronRight, Menu, X, Shield, AlertTriangle, CheckSquare, FileDown
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { notificationsApi } from '../../api';
@@ -25,13 +25,16 @@ const getNavItems = (role) => {
     { to: '/incidents', icon: FileText, label: 'Incidents' },
   ];
   if (role === 'hod') {
-    // base.push({ to: '/hod/training', icon: GraduationCap, label: 'Training' });
+    base.push({ to: '/hod/action-items', icon: ClipboardList, label: 'Action Items' });
   }
   if (role === 'imc') {
     base.push({ to: '/imc/dashboard?tab=analytics', icon: BarChart3, label: 'Dept. Analytics', matchSearch: '?tab=analytics' });
   }
   if (role === 'head_management') {
-    base.push({ to: '/management/dashboard?tab=analytics', icon: BarChart3, label: 'Dept. Analytics', matchSearch: '?tab=analytics' });
+    base.push(
+      { to: '/management/dashboard?tab=analytics', icon: BarChart3, label: 'Dept. Analytics', matchSearch: '?tab=analytics' },
+      { to: '/management/reports', icon: FileDown, label: 'Executive Reports' }
+    );
   }
   if (role === 'system_admin') {
     base.push(

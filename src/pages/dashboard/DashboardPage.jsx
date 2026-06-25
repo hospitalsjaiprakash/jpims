@@ -7,7 +7,7 @@ import { StatCard, Spinner, EmptyState, Modal, Tabs } from '../../components/ui'
 import {
   FileText, AlertTriangle, CheckCircle, Clock, TrendingUp,
   FilePlus, ClipboardList, BarChart3, Eye, Inbox, UserCheck, Timer, XOctagon, LayoutDashboard,
-  Activity, Paperclip
+  Activity, Paperclip, Flame, ShieldAlert, ChevronRight
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -34,6 +34,16 @@ export default function DashboardPage() {
     queryKey: ['incidents', { page: 1, limit: 5 }],
     queryFn: () => incidentsApi.list({ page: 1, limit: 5 }).then(r => r.data?.incidents || []),
   });
+
+  const { data: allReceived = [] } = useQuery({
+    queryKey: ['incidents', 'received-all'],
+    queryFn: () => incidentsApi.list({ limit: 1000 }).then(r => r.data?.incidents || []),
+    enabled: user?.role === 'hod'
+  });
+
+  const hodQueue = allReceived.filter(i => i.status === 'with_hod' || i.status === 'with_hod_and_imc');
+  const overdueCount = hodQueue.filter(i => ((new Date() - new Date(i.created_at)) / 3600000 > 48)).length;
+  const escalatedCount = hodQueue.filter(i => !!i.priority_escalated_by).length;
 
   if (isLoading) {
     return (
@@ -81,6 +91,32 @@ export default function DashboardPage() {
       {/* OVERVIEW TAB */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Warnings Panel */}
+          {user?.role === 'hod' && (overdueCount > 0 || escalatedCount > 0) && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <ShieldAlert size={20} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-red-800">Escalation & SLA Warnings</h3>
+                <ul className="mt-1 space-y-1 text-sm text-red-700">
+                  {escalatedCount > 0 && (
+                    <li className="flex items-center gap-1.5 font-bold animate-pulse">
+                      <Flame size={14} className="text-red-600" />
+                      {escalatedCount} incident(s) in your queue have been ESCALATED for priority action!
+                    </li>
+                  )}
+                  {overdueCount > 0 && (
+                    <li className="flex items-center gap-1.5">
+                      <Clock size={14} className="text-red-600" />
+                      {overdueCount} incident(s) have breached the 48-hour SLA.
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          )}
+
           {/* Stat cards — hidden for HOD (they use the sections below) */}
           {user?.role !== 'hod' && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -90,6 +126,7 @@ export default function DashboardPage() {
                 value={totals.total || 0}
                 color="bg-blue-50"
                 iconColor="text-blue-600"
+                onClick={() => navigate('/incidents')}
               />
               <StatCard
                 icon={Clock}
@@ -97,6 +134,7 @@ export default function DashboardPage() {
                 value={totals.active || 0}
                 color="bg-amber-50"
                 iconColor="text-amber-700"
+                onClick={() => navigate('/incidents', { state: { status: 'active' } })}
               />
               <StatCard
                 icon={CheckCircle}
@@ -104,6 +142,7 @@ export default function DashboardPage() {
                 value={totals.resolved || 0}
                 color="bg-green-50"
                 iconColor="text-green-700"
+                onClick={() => navigate('/incidents', { state: { status: 'resolved' } })}
               />
               <StatCard
                 icon={TrendingUp}
@@ -130,6 +169,7 @@ export default function DashboardPage() {
                   value={stats?.hodReport?.received || 0}
                   color="bg-blue-50"
                   iconColor="text-blue-600"
+                  onClick={() => navigate('/incidents')}
                 />
                 <StatCard
                   icon={UserCheck}
@@ -159,6 +199,7 @@ export default function DashboardPage() {
                   value={stats?.hodReport?.myIncidents?.total || 0}
                   color="bg-indigo-50"
                   iconColor="text-indigo-600"
+                  onClick={() => navigate('/incidents', { state: { viewMode: 'my_incidents' } })}
                 />
                 <StatCard
                   icon={Clock}
@@ -166,6 +207,7 @@ export default function DashboardPage() {
                   value={stats?.hodReport?.myIncidents?.active || 0}
                   color="bg-amber-50"
                   iconColor="text-amber-700"
+                  onClick={() => navigate('/incidents', { state: { viewMode: 'my_incidents', status: 'active' } })}
                 />
                 <StatCard
                   icon={CheckCircle}
@@ -173,6 +215,7 @@ export default function DashboardPage() {
                   value={stats?.hodReport?.myIncidents?.resolved || 0}
                   color="bg-green-50"
                   iconColor="text-green-700"
+                  onClick={() => navigate('/incidents', { state: { viewMode: 'my_incidents', status: 'resolved' } })}
                 />
                 <StatCard
                   icon={TrendingUp}
@@ -182,6 +225,74 @@ export default function DashboardPage() {
                   iconColor="text-purple-600"
                 />
               </div>
+            </div>
+          )}
+
+          {/* Action Required Queue (HOD Only) */}
+          {user?.role === 'hod' && (
+            <div className="card p-5 space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3 flex-wrap gap-2">
+                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <ClipboardList size={16} className="text-indigo-500" />
+                  <span>Action Required Queue ({hodQueue.length})</span>
+                </h2>
+              </div>
+              {hodQueue.length === 0 ? (
+                <EmptyState icon={CheckCircle} title="All Caught Up" message="You have no incidents pending your feedback." />
+              ) : (
+                <div className="space-y-3">
+                  {hodQueue.map(inc => {
+                    const isOverdue = ((new Date() - new Date(inc.created_at)) / 3600000 > 48);
+                    return (
+                      <div key={inc.id} onClick={() => navigate(`/incidents/${encodeURIComponent(inc.id)}`)} className={`card p-4 cursor-pointer hover:shadow-card-hover border transition-all group relative overflow-hidden ${
+                          inc.priority_escalated_by ? 'border-red-300 bg-red-50/20 shadow-sm' :
+                          isOverdue ? 'border-red-100 bg-gradient-to-r from-red-50/10 to-transparent' : 'border-slate-150 hover:border-indigo-100'
+                        }`}>
+                        {inc.priority_escalated_by && (
+                          <div className="absolute top-0 right-0 px-2 py-1 bg-red-100 text-red-700 text-[10px] font-bold rounded-bl-lg border-b border-l border-red-200 animate-pulse">
+                            <Flame size={10} className="inline mr-1" />
+                            ESCALATED PRIORITY
+                          </div>
+                        )}
+                        <div className="flex items-start gap-4">
+                          <div className={`w-1.5 self-stretch rounded-full flex-shrink-0 ${
+                            inc.severity === 'Grave' ? 'bg-purple-400' :
+                            inc.severity === 'Major' ? 'bg-amber-400' : 'bg-green-400'
+                          }`} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="font-mono text-xs font-bold text-green-700">{inc.reference_id}</span>
+                              <span className={`badge ${getSeverityClass(inc.severity)}`}>{inc.severity}</span>
+                              {isOverdue && (
+                                <span className="badge bg-red-100 text-red-700 font-bold border border-red-200">
+                                  <Clock size={10} className="inline mr-1" /> 48h+ SLA BREACH
+                                </span>
+                              )}
+                              {inc.priority_escalated_by && (
+                                <span className="badge bg-red-100 text-red-700 font-bold border border-red-200">
+                                  <Flame size={10} className="inline mr-1" /> ESCALATED BY {inc.priority_escalated_by.toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm font-semibold text-slate-800 mb-1">{inc.incident_type}</p>
+                            <p className="text-xs text-slate-500">
+                              Reporter: {inc.reporter_name} ({inc.reporter_department}) · Location: {inc.main_location_name} · Date: {formatDate(inc.incident_date)}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end justify-between self-stretch flex-shrink-0">
+                            <button
+                              onClick={e => { e.stopPropagation(); navigate(`/incidents/${encodeURIComponent(inc.id)}`); }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-medium transition-colors border border-indigo-200 mt-4"
+                            >
+                              <Eye size={13} /> Provide Feedback
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -294,6 +405,7 @@ export default function DashboardPage() {
                 value={stats?.hodReport?.received || 0}
                 color="bg-blue-50"
                 iconColor="text-blue-600"
+                onClick={() => navigate('/incidents')}
               />
               <StatCard
                 icon={UserCheck}
@@ -325,6 +437,7 @@ export default function DashboardPage() {
                 value={stats?.hodReport?.myIncidents?.total || 0}
                 color="bg-indigo-50"
                 iconColor="text-indigo-600"
+                onClick={() => navigate('/incidents', { state: { viewMode: 'my_incidents' } })}
               />
               <StatCard
                 icon={Clock}
@@ -332,6 +445,7 @@ export default function DashboardPage() {
                 value={stats?.hodReport?.myIncidents?.active || 0}
                 color="bg-amber-50"
                 iconColor="text-amber-700"
+                onClick={() => navigate('/incidents', { state: { viewMode: 'my_incidents', status: 'active' } })}
               />
               <StatCard
                 icon={CheckCircle}
@@ -339,6 +453,7 @@ export default function DashboardPage() {
                 value={stats?.hodReport?.myIncidents?.resolved || 0}
                 color="bg-green-50"
                 iconColor="text-green-700"
+                onClick={() => navigate('/incidents', { state: { viewMode: 'my_incidents', status: 'resolved' } })}
               />
               <StatCard
                 icon={TrendingUp}
@@ -402,6 +517,12 @@ export default function DashboardPage() {
                         <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded px-1 py-0.5" title={`${inc.attachments.length} attachment(s)`}>
                           <Paperclip size={10} />
                           <span>{inc.attachments.length}</span>
+                        </span>
+                      )}
+                      {inc.priority_escalated_by && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-red-700 bg-red-100 border border-red-200 rounded px-1 py-0.5 animate-pulse" title={`Escalated by ${inc.priority_escalated_by}`}>
+                          <Flame size={10} />
+                          <span>ESCALATED</span>
                         </span>
                       )}
                     </div>
@@ -508,6 +629,12 @@ export default function DashboardPage() {
                 <span className="text-slate-600 font-medium">IMC Status</span>
                 <span className={getStatusClass(selectedInc.status)}>{getStatusLabel(selectedInc.status)}</span>
               </div>
+              {selectedInc.priority_escalated_by && (
+                <div className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-xl animate-pulse">
+                  <span className="text-red-700 font-bold flex items-center gap-1.5"><Flame size={16} /> PRIORITY ESCALATION</span>
+                  <span className="text-red-700 text-xs font-bold bg-red-100 px-2 py-1 rounded border border-red-200">BY {selectedInc.priority_escalated_by.toUpperCase()}</span>
+                </div>
+              )}
               <div>
                 <span className="text-slate-500 block text-xs font-semibold uppercase tracking-wider mb-1 px-1">Feedback by HOD</span>
                 <p className="text-slate-700 bg-amber-50 p-3 rounded-xl border border-amber-100 text-sm">{selectedInc.hod_feedback || 'No feedback yet'}</p>
