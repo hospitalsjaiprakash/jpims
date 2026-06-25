@@ -509,7 +509,7 @@ export default function ImcDashboard() {
 
                           <p className="text-sm font-semibold text-slate-800 mb-1">{inc.incident_type}</p>
                           <p className="text-xs text-slate-500 mb-2">
-                            Reporter: {inc.reporter_name} ({inc.reporter_department}) · Location: {inc.main_location_name}{inc.sub_location_name ? ` - ${inc.sub_location_name}` : ''} · Date: {formatDate(inc.incident_date)}
+                            Reporter: {inc.reporter_name} ({inc.reporter_department}) · Location: {inc.main_location_name}{inc.sub_location_name ? ` - ${inc.sub_location_name}` : ''} · Date: {formatDate(inc.incident_date || inc.created_at)}
                           </p>
 
                           {isRedirect && (

@@ -121,6 +121,8 @@ export const incidentsApi = {
       }
     }
 
+    filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
     return { 
       data: {
         incidents: filtered,
@@ -469,6 +471,23 @@ export const incidentsApi = {
     saveIncidents();
     return { data: incident };
   },
+  verifyTraining: async (id) => {
+    await delay();
+    const incident = mockIncidents.find(i => i.id === id);
+    const userString = localStorage.getItem('ims_user');
+    const currentUser = userString ? JSON.parse(userString) : null;
+    if (incident) {
+      incident.training_completed = true;
+      if (!incident.workflow_history) incident.workflow_history = [];
+      incident.workflow_history.push({
+        action: 'Training Verified',
+        by: currentUser ? currentUser.fullName : 'IMC',
+        timestamp: new Date().toISOString()
+      });
+    }
+    saveIncidents();
+    return { data: incident };
+  },
   approveRedirect: async (id, data) => {
     await delay();
     const incident = mockIncidents.find(i => i.id === id);
@@ -579,7 +598,9 @@ export const metaApi = {
 export const imcApi = {
   queue: async () => {
     await delay();
-    return { data: mockIncidents.filter(i => ['with_imc', 'with_hod_and_imc', 'redirect_requested', 'dispute'].includes(i.status)) };
+    const q = mockIncidents.filter(i => ['with_imc', 'with_hod_and_imc', 'redirect_requested', 'dispute'].includes(i.status));
+    q.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return { data: q };
   },
 };
 

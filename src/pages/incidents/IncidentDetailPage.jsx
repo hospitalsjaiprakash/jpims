@@ -172,6 +172,14 @@ export default function IncidentDetailPage() {
     }
   });
 
+  const verifyTrainingMutation = useMutation({
+    mutationFn: () => incidentsApi.verifyTraining(id),
+    onSuccess: () => {
+      toast.success('Training completion verified.');
+      refetch();
+    }
+  });
+
   const { data: deptsData } = useQuery({
     queryKey: ['departments'],
     queryFn: () => metaApi.departments().then(r => r.data || []),
@@ -322,7 +330,18 @@ export default function IncidentDetailPage() {
               <DetailRow icon={FileText} label="Category" value={incident.incident_category} />
               <DetailRow icon={FileText} label="Type" value={incident.incident_type} />
               {incident.has_responsible_person && (
-                <DetailRow icon={User} label="Responsible Person" value={incident.responsible_person_name || '—'} />
+                <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
+                  <DetailRow icon={User} label="Responsible Person" value={incident.responsible_person_name || '—'} />
+                  {incident.training_completed ? (
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 px-3 py-1.5 rounded-lg border border-green-200">
+                      <CheckCircle size={14} /> Training Completed & Verified
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+                      <AlertTriangle size={14} /> Mandatory Training Pending
+                    </div>
+                  )}
+                </div>
               )}
             </div>
             <div className="mt-4 pt-4 border-t border-slate-100">
@@ -418,6 +437,19 @@ export default function IncidentDetailPage() {
                         Forward to Management
                       </button>
                     </div>
+                    {incident.has_responsible_person && !incident.training_completed && (
+                      <div className="mt-4 pt-4 border-t border-indigo-200/50">
+                        <button
+                          onClick={() => verifyTrainingMutation.mutate()}
+                          disabled={verifyTrainingMutation.isPending}
+                          className="w-full btn-secondary btn-sm bg-white border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                        >
+                          {verifyTrainingMutation.isPending ? <Spinner size={14} /> : <CheckCircle size={14} />}
+                          Mark Training as Completed & Verified
+                        </button>
+                        <p className="text-[10px] text-indigo-600 mt-1.5 text-center">Clicking this validates that the responsible person has completed their mandated training.</p>
+                      </div>
+                    )}
                   </div>
                 </>
               )}

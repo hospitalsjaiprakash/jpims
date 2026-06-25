@@ -1836,12 +1836,59 @@ export const initialMockIncidents = [
     imc_feedback: 'Reviewed by IMC. Recommending management decision.',
     management_feedback: 'Corrective action taken. Incident closed.',
     workflow_history: [{"action":"Reported","by":"NIRMAL NAIK","timestamp":"2026-05-25T05:21:20.304Z"},{"action":"HOD Viewed","by":"HOD Infection Control and Microbiology","timestamp":"2026-05-30T05:21:20.304Z"},{"action":"HOD Reviewed","by":"HOD Infection Control and Microbiology","timestamp":"2026-06-04T05:21:20.304Z"},{"action":"IMC Processed","by":"IMC Committee","timestamp":"2026-06-09T05:21:20.304Z"},{"action":"Resolved","by":"Management","timestamp":"2026-06-19T05:21:20.304Z"}]
+  },
+  {
+    id: 'JPHRC/IMS/2026/0061',
+    reference_id: 'JPHRC/IMS/2026/0061',
+    reporter_id: '1',
+    reporter_name: 'NIRMAL NAIK',
+    reporter_department: 'Digital Communications',
+    reporter_employee_id: '13574',
+    status: 'with_imc',
+    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+    main_location_name: 'MAIN Hospital Danidiapali',
+    sub_location_name: 'Ward C',
+    departments: ['Nursing Services'],
+    location: 'MAIN Hospital Danidiapali - Ward C',
+    incident_type: 'Error/Delay during administration',
+    incident_category: 'Medication Related',
+    incident_types: ['Error/Delay during administration'],
+    incident_categories: ['Medication Related'],
+    occurred_to: 'Patient',
+    has_responsible_person: true,
+    responsible_person_name: 'Nurse Priya (Emp ID: 11205)',
+    training_completed: false,
+    description: 'Nurse Priya administered the incorrect dosage of medication to the patient due to a misread prescription chart. No adverse reaction occurred, but this is a critical near-miss. Root cause: Human Error.',
+    severity: 'Major',
+    hod_feedback: 'Investigated the matter. It was a human error by Nurse Priya. Recommending mandatory refresher training on medication administration protocols before she can resume independent duties.',
+    imc_feedback: null,
+    management_feedback: null,
+    workflow_history: [
+      {"action":"Reported","by":"NIRMAL NAIK","timestamp": new Date(Date.now() - 5 * 86400000).toISOString()},
+      {"action":"HOD Viewed","by":"HOD Nursing Services","timestamp": new Date(Date.now() - 4 * 86400000).toISOString()},
+      {"action":"HOD Reviewed","by":"HOD Nursing Services","timestamp": new Date(Date.now() - 3 * 86400000).toISOString()}
+    ]
   }
 ];
 
 const savedIncidents = localStorage.getItem('ims_incidents');
 let parsed = savedIncidents ? JSON.parse(savedIncidents) : null;
+
+// Invalidate outdated cached mock data that used generic 'Clinical'/'Non-Clinical' types
+if (parsed && parsed.some(i => i.incident_type === 'Clinical' || i.incident_type === 'Non-Clinical')) {
+  parsed = null;
+  localStorage.removeItem('ims_incidents');
+}
+
 export let mockIncidents = (parsed && parsed.length > 0) ? parsed : initialMockIncidents;
+
+// Sort globally so newest incidents (highest ID/date) appear first
+mockIncidents.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+// Ensure all mock incidents have an incident_date for display purposes
+mockIncidents.forEach(inc => {
+  if (!inc.incident_date) inc.incident_date = inc.created_at;
+});
 
 const savedNotifications = localStorage.getItem('ims_notifications');
 export let mockNotifications = savedNotifications ? JSON.parse(savedNotifications) : [];
