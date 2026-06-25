@@ -1,9 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
+import { queryClient } from './utils/queryClient';
 
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/auth/LoginPage';
@@ -33,17 +33,7 @@ const getRoleDashboard = (role) => {
 };
 
 // ── React Query client ──────────────────────────────────────────────────────
-// staleTime: data is considered fresh for 5 min (no refetch within window)
-// gcTime: keep unused queries in cache for 24 hours
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5,       // 5 minutes — no background refetch if data is fresh
-      gcTime: 1000 * 60 * 60 * 24,    // 24 hours — keep cache alive in localStorage
-      retry: 1,
-    },
-  },
-});
+// Imported from ./utils/queryClient to allow clearing cache across auth sessions
 
 // ── localStorage persister ──────────────────────────────────────────────────
 // Saves the entire React Query cache to localStorage key 'ims_query_cache'

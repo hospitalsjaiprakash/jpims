@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { authApi } from '../api';
+import { queryClient } from '../utils/queryClient';
 
 export const useAuthStore = create((set, get) => ({
   user: (() => {
@@ -14,6 +15,8 @@ export const useAuthStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const { data } = await authApi.login(credentials);
+      queryClient.clear();
+      localStorage.removeItem('ims_query_cache');
       localStorage.setItem('ims_token', data.token);
       localStorage.setItem('ims_user', JSON.stringify(data.user));
       set({ user: data.user, token: data.token, isAuthenticated: true, loading: false });
@@ -29,6 +32,8 @@ export const useAuthStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const { data } = await authApi.committeeLogin(credentials);
+      queryClient.clear();
+      localStorage.removeItem('ims_query_cache');
       localStorage.setItem('ims_token', data.token);
       localStorage.setItem('ims_user', JSON.stringify(data.user));
       set({ user: data.user, token: data.token, isAuthenticated: true, loading: false });
@@ -41,6 +46,7 @@ export const useAuthStore = create((set, get) => ({
   },
 
   logout: () => {
+    queryClient.clear();
     localStorage.removeItem('ims_token');
     localStorage.removeItem('ims_user');
     // Clear cached query data so a new user doesn't see stale data from previous session

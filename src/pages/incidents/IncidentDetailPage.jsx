@@ -55,6 +55,7 @@ export default function IncidentDetailPage() {
   const [feedbackText, setFeedbackText] = useState('');
   const [mdFaultType, setMdFaultType] = useState('');
   const [mdActions, setMdActions] = useState('');
+  const [mdRequireTraining, setMdRequireTraining] = useState(false);
   const [reopenReason, setReopenReason] = useState('');
   const [hodAcknowledged, setHodAcknowledged] = useState(false);
   const [redirectReason, setRedirectReason] = useState('');
@@ -90,7 +91,7 @@ export default function IncidentDetailPage() {
   });
 
   const mdMutation = useMutation({
-    mutationFn: () => incidentsApi.mdDecision(id, { faultType: mdFaultType, correctiveActions: mdActions }),
+    mutationFn: () => incidentsApi.mdDecision(id, { faultType: mdFaultType, correctiveActions: mdActions, requireTraining: mdRequireTraining }),
     onSuccess: () => { toast.success('Incident closed.'); setShowMdModal(false); refetch(); }
   });
 
@@ -203,7 +204,8 @@ export default function IncidentDetailPage() {
     ['with_hod', 'with_hod_and_imc'].includes(incident.status);
 
   const canImcAct = user?.role === 'imc' &&
-    ['with_imc', 'with_hod_and_imc', 'redirect_requested', 'dispute'].includes(incident.status);
+    (['with_imc', 'with_hod_and_imc', 'redirect_requested', 'dispute'].includes(incident.status) ||
+     (incident.status === 'resolved' && incident.has_responsible_person && !incident.training_completed));
 
   const canMdAct = user?.role === 'head_management' &&
     incident.status === 'with_head_management';
@@ -702,6 +704,22 @@ export default function IncidentDetailPage() {
           <div>
             <label className="field-label field-required">Corrective Actions</label>
             <textarea value={mdActions} onChange={e => setMdActions(e.target.value)} className="textarea" rows={5} placeholder="Describe the corrective actions taken or recommended…" />
+          </div>
+          <div className="pt-2 border-t border-slate-100">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={mdRequireTraining}
+                onChange={e => setMdRequireTraining(e.target.checked)}
+                className="w-4 h-4 accent-blue-600 rounded"
+              />
+              <span className="text-sm font-semibold text-slate-800">
+                Mandatory Training Required for Responsible / Culprit Employee
+              </span>
+            </label>
+            <p className="text-xs text-slate-500 mt-1 pl-7">
+              If checked, this employee will be flagged for mandatory training, and the IMC authority will be assigned to verify training completion.
+            </p>
           </div>
         </div>
       </Modal>

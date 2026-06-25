@@ -74,6 +74,16 @@ export const authApi = {
   },
   updateNotificationPrefs: async (data) => {
     await delay();
+    const userString = localStorage.getItem('ims_user');
+    if (userString) {
+      const user = JSON.parse(userString);
+      const updatedUser = { ...user, ...data };
+      localStorage.setItem('ims_user', JSON.stringify(updatedUser));
+      const found = Object.values(mockUsers).find(u => u.id === user.id);
+      if (found) {
+        Object.assign(found, data);
+      }
+    }
     return { data: { message: 'Preferences updated' } };
   },
 };
@@ -419,9 +429,14 @@ export const incidentsApi = {
       incident.status = 'resolved';
       incident.management_feedback = data.correctiveActions;
       incident.category = data.faultType;
+      if (data.requireTraining) {
+        incident.has_responsible_person = true;
+        incident.responsible_person_name = incident.occurred_to !== 'None' ? `${incident.occurred_to} (Responsible Person)` : 'Responsible Employee';
+        incident.training_completed = false;
+      }
       if (!incident.workflow_history) incident.workflow_history = [];
       incident.workflow_history.push({
-        action: 'Resolved',
+        action: data.requireTraining ? 'Resolved & Training Mandated' : 'Resolved',
         by: 'Management',
         timestamp: new Date().toISOString()
       });
@@ -598,7 +613,10 @@ export const metaApi = {
 export const imcApi = {
   queue: async () => {
     await delay();
-    const q = mockIncidents.filter(i => ['with_imc', 'with_hod_and_imc', 'redirect_requested', 'dispute'].includes(i.status));
+    const q = mockIncidents.filter(i => 
+      ['with_imc', 'with_hod_and_imc', 'redirect_requested', 'dispute'].includes(i.status) ||
+      (i.status === 'resolved' && i.has_responsible_person && !i.training_completed)
+    );
     q.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     return { data: q };
   },
