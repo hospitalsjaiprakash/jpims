@@ -426,17 +426,19 @@ export const incidentsApi = {
     await delay();
     const incident = mockIncidents.find(i => i.id === id);
     if (incident) {
-      incident.status = 'resolved';
-      incident.management_feedback = data.correctiveActions;
-      incident.category = data.faultType;
       if (data.requireTraining) {
+        incident.status = 'pending_training';
         incident.has_responsible_person = true;
         incident.responsible_person_name = incident.occurred_to !== 'None' ? `${incident.occurred_to} (Responsible Person)` : 'Responsible Employee';
         incident.training_completed = false;
+      } else {
+        incident.status = 'resolved';
       }
+      incident.management_feedback = data.correctiveActions;
+      incident.category = data.faultType;
       if (!incident.workflow_history) incident.workflow_history = [];
       incident.workflow_history.push({
-        action: data.requireTraining ? 'Resolved & Training Mandated' : 'Resolved',
+        action: data.requireTraining ? 'Management Mandated Training' : 'Resolved',
         by: 'Management',
         timestamp: new Date().toISOString()
       });
@@ -493,9 +495,10 @@ export const incidentsApi = {
     const currentUser = userString ? JSON.parse(userString) : null;
     if (incident) {
       incident.training_completed = true;
+      incident.status = 'resolved';
       if (!incident.workflow_history) incident.workflow_history = [];
       incident.workflow_history.push({
-        action: 'Training Verified',
+        action: 'Training Verified & Incident Closed',
         by: currentUser ? currentUser.fullName : 'IMC',
         timestamp: new Date().toISOString()
       });
@@ -614,7 +617,7 @@ export const imcApi = {
   queue: async () => {
     await delay();
     const q = mockIncidents.filter(i => 
-      ['with_imc', 'with_hod_and_imc', 'redirect_requested', 'dispute'].includes(i.status) ||
+      ['with_imc', 'with_hod_and_imc', 'redirect_requested', 'dispute', 'pending_training'].includes(i.status) ||
       (i.status === 'resolved' && i.has_responsible_person && !i.training_completed)
     );
     q.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));

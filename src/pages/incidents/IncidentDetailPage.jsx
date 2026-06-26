@@ -26,7 +26,7 @@ const TIMELINE_STAGES = [
 
 const statusOrder = {
   submitted: 0, with_hod: 1, with_hod_and_imc: 1, with_imc: 2,
-  redirect_requested: 2, with_head_management: 3, resolved: 4,
+  redirect_requested: 2, with_head_management: 3, pending_training: 3.5, resolved: 4,
 };
 
 export default function IncidentDetailPage() {
@@ -204,7 +204,7 @@ export default function IncidentDetailPage() {
     ['with_hod', 'with_hod_and_imc'].includes(incident.status);
 
   const canImcAct = user?.role === 'imc' &&
-    (['with_imc', 'with_hod_and_imc', 'redirect_requested', 'dispute'].includes(incident.status) ||
+    (['with_imc', 'with_hod_and_imc', 'redirect_requested', 'dispute', 'pending_training'].includes(incident.status) ||
      (incident.status === 'resolved' && incident.has_responsible_person && !incident.training_completed));
 
   const canMdAct = user?.role === 'head_management' &&
@@ -352,8 +352,29 @@ export default function IncidentDetailPage() {
             </div>
           </div>
 
+          {/* IMC Employee Training Verification Card */}
+          {canImcAct && incident.status === 'pending_training' && (
+            <div className="card p-5 border-amber-300 bg-amber-50/20 shadow-sm">
+              <div className="flex items-center gap-2 mb-3 border-b border-amber-200/60 pb-3">
+                <UserCheck className="text-amber-700" size={18} />
+                <h2 className="text-sm font-bold text-amber-900 uppercase tracking-wider">Mandatory Employee Training Verification</h2>
+              </div>
+              <p className="text-sm text-slate-700 mb-4">
+                Management has mandated corrective training for <strong>{incident.responsible_person_name || 'the responsible employee'}</strong>. Once the employee has completed the required training modules, confirm below to formally resolve and close this incident.
+              </p>
+              <button
+                onClick={() => verifyTrainingMutation.mutate()}
+                disabled={verifyTrainingMutation.isPending}
+                className="w-full btn-primary bg-amber-600 hover:bg-amber-700 border-amber-600 text-white shadow-md py-2.5 flex items-center justify-center gap-2 font-semibold text-sm transition-all"
+              >
+                {verifyTrainingMutation.isPending ? <Spinner size={16} className="text-white" /> : <CheckCircle size={16} />}
+                Confirm Training Completed & Close Incident
+              </button>
+            </div>
+          )}
+
           {/* IMC Inline Review & Action Card */}
-          {canImcAct && (
+          {canImcAct && incident.status !== 'pending_training' && (
             <div className="card p-5 border-indigo-200 bg-indigo-50/10">
               {incident.status === 'redirect_requested' ? (
                 <div>
@@ -408,30 +429,22 @@ export default function IncidentDetailPage() {
                 <>
                   <div className="flex items-center gap-2 mb-4">
                     <MessageSquare className="text-indigo-600" size={18} />
-                    <h2 className="text-sm font-semibold text-slate-800">IMC Review & Action</h2>
+                    <h2 className="text-sm font-semibold text-slate-800">Quality Review (IMC)</h2>
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className="field-label field-required mb-1.5">Your Review / Feedback</label>
+                      <label className="field-label mb-1">Your Review & Findings</label>
                       <textarea
                         value={feedbackText}
                         onChange={e => setFeedbackText(e.target.value)}
+                        placeholder="Enter quality assessment, root cause observation, or corrective action recommendations..."
                         className="textarea"
-                        rows={4}
-                        placeholder="Provide your detailed review, findings, and recommendations..."
+                        rows={3}
                       />
                     </div>
-                    <div className="flex gap-2 pt-2">
+                    <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => imcFeedbackMutation.mutate(false)}
-                        disabled={!feedbackText.trim() || imcFeedbackMutation.isPending}
-                        className="btn-secondary btn-sm"
-                      >
-                        {imcFeedbackMutation.isPending ? <Spinner size={12} /> : null}
-                        Save Feedback
-                      </button>
-                      <button
-                        onClick={() => imcFeedbackMutation.mutate(true)}
+                        onClick={() => imcFeedbackMutation.mutate()}
                         disabled={!feedbackText.trim() || imcFeedbackMutation.isPending}
                         className="btn-primary btn-sm"
                       >
@@ -439,19 +452,6 @@ export default function IncidentDetailPage() {
                         Forward to Management
                       </button>
                     </div>
-                    {incident.has_responsible_person && !incident.training_completed && (
-                      <div className="mt-4 pt-4 border-t border-indigo-200/50">
-                        <button
-                          onClick={() => verifyTrainingMutation.mutate()}
-                          disabled={verifyTrainingMutation.isPending}
-                          className="w-full btn-secondary btn-sm bg-white border-indigo-200 text-indigo-700 hover:bg-indigo-50"
-                        >
-                          {verifyTrainingMutation.isPending ? <Spinner size={14} /> : <CheckCircle size={14} />}
-                          Mark Training as Completed & Verified
-                        </button>
-                        <p className="text-[10px] text-indigo-600 mt-1.5 text-center">Clicking this validates that the responsible person has completed their mandated training.</p>
-                      </div>
-                    )}
                   </div>
                 </>
               )}
@@ -553,8 +553,8 @@ export default function IncidentDetailPage() {
             <h2 className="text-sm font-semibold text-slate-800 mb-4">Progress</h2>
             <div className="space-y-0">
               {TIMELINE_STAGES.map((stage, i) => {
-                const done = statusOrder[incident.status] > i;
-                const active = statusOrder[incident.status] === i;
+                const done = statusOrder[incident.status] > i || (i === 4 && incident.status === 'resolved');
+                const active = statusOrder[incident.status] === i || (i === 4 && incident.status === 'pending_training');
                 return (
                   <div key={stage.key} className="relative flex gap-3 pb-5 last:pb-0">
                     {i < TIMELINE_STAGES.length - 1 && (
@@ -566,8 +566,8 @@ export default function IncidentDetailPage() {
                       {done ? <CheckCircle size={14} /> : i + 1}
                     </div>
                     <div className="pt-1">
-                      <p className={`text-sm font-medium ${active ? 'text-blue-700' : done ? 'text-green-700' : 'text-slate-400'}`}>
-                        {stage.label}
+                      <p className={`text-sm font-medium ${active ? 'text-blue-700 font-bold' : done ? 'text-green-700' : 'text-slate-400'}`}>
+                        {i === 4 && incident.status === 'pending_training' ? 'Training Verification (IMC)' : stage.label}
                       </p>
                       {active && <p className="text-xs text-blue-500 mt-0.5 flex items-center gap-1"><Clock size={11} /> In progress</p>}
                     </div>
@@ -714,7 +714,7 @@ export default function IncidentDetailPage() {
                 className="w-4 h-4 accent-blue-600 rounded"
               />
               <span className="text-sm font-semibold text-slate-800">
-                Mandatory Training Required for Responsible / Culprit Employee
+                Mandatory Training Required for Responsible Employee
               </span>
             </label>
             <p className="text-xs text-slate-500 mt-1 pl-7">

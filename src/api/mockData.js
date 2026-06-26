@@ -1855,9 +1855,6 @@ export const initialMockIncidents = [
     incident_types: ['Error/Delay during administration'],
     incident_categories: ['Medication Related'],
     occurred_to: 'Patient',
-    has_responsible_person: true,
-    responsible_person_name: 'Nurse Priya (Emp ID: 11205)',
-    training_completed: false,
     description: 'Nurse Priya administered the incorrect dosage of medication to the patient due to a misread prescription chart. No adverse reaction occurred, but this is a critical near-miss. Root cause: Human Error.',
     severity: 'Major',
     hod_feedback: 'Investigated the matter. It was a human error by Nurse Priya. Recommending mandatory refresher training on medication administration protocols before she can resume independent duties.',
@@ -1874,8 +1871,11 @@ export const initialMockIncidents = [
 const savedIncidents = localStorage.getItem('ims_incidents');
 let parsed = savedIncidents ? JSON.parse(savedIncidents) : null;
 
-// Invalidate outdated cached mock data that used generic 'Clinical'/'Non-Clinical' types
-if (parsed && parsed.some(i => i.incident_type === 'Clinical' || i.incident_type === 'Non-Clinical')) {
+// Invalidate outdated cached mock data or stale cache with premature training flags
+if (parsed && (
+  parsed.some(i => i.incident_type === 'Clinical' || i.incident_type === 'Non-Clinical') ||
+  parsed.some(i => i.id === 'JPHRC/IMS/2026/0061' && i.has_responsible_person)
+)) {
   parsed = null;
   localStorage.removeItem('ims_incidents');
 }

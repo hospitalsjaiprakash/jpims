@@ -499,29 +499,6 @@ export default function ManagementDashboard() {
               )}
             </div>
 
-            {/* RCA CAPA Tracker */}
-            <div className="card p-5">
-              <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <ShieldAlert size={16} className="text-emerald-500" />
-                RCA & CAPA Compliance
-              </h3>
-              <div className="flex flex-col items-center justify-center h-48 space-y-4">
-                 <div className="relative w-32 h-32 flex items-center justify-center">
-                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                      <path className="text-slate-100" strokeWidth="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                      <path className="text-emerald-500" strokeWidth="4" strokeDasharray={`${rcaStats.pct}, 100`} stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    </svg>
-                    <div className="absolute flex flex-col items-center justify-center">
-                      <span className="text-2xl font-bold text-slate-800">{rcaStats.pct}%</span>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Completed</span>
-                    </div>
-                 </div>
-                 <div className="text-xs text-center text-slate-500 max-w-[200px]">
-                   <span className="font-bold text-slate-700">{rcaStats.completed}</span> out of <span className="font-bold text-slate-700">{rcaStats.total}</span> Major/Grave incidents have documented RCA.
-                 </div>
-              </div>
-            </div>
-
           </div>
 
           {/* Quick actions */}
