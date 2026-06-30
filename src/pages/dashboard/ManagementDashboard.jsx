@@ -100,19 +100,8 @@ export default function ManagementDashboard() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  // Read initial tab from URL (?tab=analytics), default to 'overview'
-  const [activeTab, setActiveTab] = useState(() => {
-    const t = searchParams.get('tab');
-    if (t === 'analytics') return 'analytics';
-    return 'overview';
-  });
-
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    setSearchParams(tab !== 'overview' ? { tab } : {}, { replace: true });
-  };
+  const [searchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') === 'analytics' ? 'analytics' : 'overview';
 
   // Analytics sub-view config
   const [searchQuery, setSearchQuery] = useState('');
@@ -296,7 +285,9 @@ export default function ManagementDashboard() {
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Management Dashboard</h1>
+          <h1 className="page-title">
+            {activeTab === 'analytics' ? 'Department Analytics & Feedback Tracker' : 'Management Dashboard'}
+          </h1>
           <p className="page-subtitle">
             Welcome back, {user?.fullName?.split(' ')[0]} · {user?.department || 'MD Office'}
           </p>
@@ -306,16 +297,6 @@ export default function ManagementDashboard() {
           Export Executive Report
         </button>
       </div>
-
-      {/* Tabs */}
-      <Tabs
-        tabs={[
-          { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-          { id: 'analytics', label: 'Dept. Analytics & Feedback Tracker', icon: BarChart3 },
-        ]}
-        active={activeTab}
-        onChange={handleTabChange}
-      />
 
       {/* OVERVIEW TAB */}
       {activeTab === 'overview' && (

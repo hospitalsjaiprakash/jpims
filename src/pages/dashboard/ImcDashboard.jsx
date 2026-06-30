@@ -98,24 +98,7 @@ export default function ImcDashboard() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-
-  // Read initial tab from URL (?tab=analytics), default to 'overview'
-  const [activeTab, setActiveTab] = useState(() => {
-    const t = searchParams.get('tab');
-    if (t === 'analytics') return 'analytics';
-    return 'overview';
-  });
-
-  useEffect(() => {
-    const t = searchParams.get('tab');
-    if (t === 'analytics') setActiveTab('analytics');
-    else setActiveTab('overview');
-  }, [searchParams]);
-
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    setSearchParams(tab !== 'overview' ? { tab } : {}, { replace: true });
-  };
+  const activeTab = searchParams.get('tab') === 'analytics' ? 'analytics' : 'overview';
   const [queueFilter, setQueueFilter] = useState('all');
 
   // Analytics config
@@ -323,7 +306,9 @@ export default function ImcDashboard() {
       {/* Page header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">IMC Dashboard</h1>
+          <h1 className="page-title">
+            {activeTab === 'analytics' ? 'Department Analytics & Feedback Tracker' : 'IMC Dashboard'}
+          </h1>
           <p className="page-subtitle">
             Welcome back, Incident Management Committee (Quality Department)
           </p>
@@ -333,16 +318,6 @@ export default function ImcDashboard() {
           Export Executive Report
         </button>
       </div>
-
-      {/* Tabs */}
-      <Tabs
-        tabs={[
-          { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-          { id: 'analytics', label: 'Dept. Analytics & Feedback Tracker', icon: BarChart3 }
-        ]}
-        active={activeTab}
-        onChange={handleTabChange}
-      />
 
       {/* OVERVIEW TAB */}
       {activeTab === 'overview' && (
